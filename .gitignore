@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.next/
+
+# Environment — never commit real credentials
+.env
+.env.local
+.env.*.local
+
+# Generated artefacts
+server/output/*
+!server/output/.gitkeep
+server/storage/
+
+# OS
+.DS_Store
