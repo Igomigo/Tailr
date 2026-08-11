@@ -50,12 +50,24 @@ export interface AiCompletionRequest {
 }
 
 /**
+ * A piece of a streamed response.
+ *
+ * Text arrives incrementally as `delta` chunks. Tool calls cannot be acted on
+ * until the model has finished emitting their arguments, so they are delivered
+ * whole in the final `done` chunk rather than streamed.
+ */
+export type AiStreamChunk =
+  | { type: "delta"; text: string }
+  | { type: "done"; response: AiResponse };
+
+/**
  * Contract every AI provider implements.
  *
- * @param request - Conversation plus any tools the model may call.
- * @returns The model's reply.
+ * `stream` powers the chat UI; `complete` remains for the second, non-visible
+ * AI call made after a tool runs.
  */
 export interface AiProvider {
   readonly name: string;
   complete(request: AiCompletionRequest): Promise<AiResponse>;
+  stream(request: AiCompletionRequest): AsyncIterable<AiStreamChunk>;
 }

@@ -15,5 +15,10 @@ server/output/*
 !server/output/.gitkeep
 server/storage/
 
+# AI agent instructions — local to each developer
+AGENTS.md
+CLAUDE.md
+.claude/
+
 # OS
 .DS_Store

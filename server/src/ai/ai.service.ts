@@ -2,6 +2,7 @@ import type {
   AiMessage,
   AiProvider,
   AiResponse,
+  AiStreamChunk,
   AiToolDefinition,
 } from "./ai-provider.interface.js";
 import { createOpenAiProvider } from "./openai.provider.js";
@@ -117,6 +118,27 @@ export async function sendMessage(
   tools: AiToolDefinition[] = [],
 ): Promise<AiResponse> {
   return getProvider().complete({
+    messages: buildMessages(history, context),
+    tools,
+  });
+}
+
+/**
+ * Streams a reply from the configured provider.
+ *
+ * Yields text as it arrives, then a final chunk carrying the complete response
+ * including any tool calls.
+ *
+ * @param history - Recent conversation in chronological order.
+ * @param context - Session-level content available for injection.
+ * @param tools - Tools the model may call this turn.
+ */
+export function streamMessage(
+  history: AiMessage[],
+  context: SessionContext = {},
+  tools: AiToolDefinition[] = [],
+): AsyncIterable<AiStreamChunk> {
+  return getProvider().stream({
     messages: buildMessages(history, context),
     tools,
   });

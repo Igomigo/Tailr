@@ -4,6 +4,7 @@ import type {
   AiMessage,
   AiProvider,
   AiResponse,
+  AiToolCall,
   AiToolDefinition,
 } from "./ai-provider.interface.js";
 import { env } from "../config/env.js";
@@ -172,6 +173,49 @@ export function createGeminiProvider(): AiProvider {
       });
 
       return { content: result.text ?? null, toolCalls };
+    },
+
+    async *stream({ messages, tools }: AiCompletionRequest) {
+      const { systemInstruction, rest } = extractSystemInstruction(messages);
+
+      let response;
+      try {
+        response = await client.models.generateContentStream({
+          model: env.GEMINI_MODEL,
+          contents: toGeminiContents(rest),
+          config: {
+            ...(systemInstruction ? { systemInstruction } : {}),
+            ...(tools?.length ? { tools: toGeminiTools(tools) } : {}),
+          },
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : "unknown error";
+        throw upstreamError(`Gemini request failed: ${detail}`);
+      }
+
+      let text = "";
+      const toolCalls: AiToolCall[] = [];
+
+      for await (const part of response) {
+        const chunkText = part.text;
+        if (chunkText) {
+          text += chunkText;
+          yield { type: "delta" as const, text: chunkText };
+        }
+
+        for (const [index, piece] of (part.candidates?.[0]?.content?.parts ?? []).entries()) {
+          if (!piece.functionCall) continue;
+          const signature = (piece as { thoughtSignature?: string }).thoughtSignature;
+          toolCalls.push({
+            id: piece.functionCall.id ?? `call_${index}`,
+            name: piece.functionCall.name ?? "",
+            arguments: (piece.functionCall.args ?? {}) as Record<string, unknown>,
+            ...(signature ? { providerMetadata: { thoughtSignature: signature } } : {}),
+          });
+        }
+      }
+
+      yield { type: "done" as const, response: { content: text || null, toolCalls } };
     },
   };
 }

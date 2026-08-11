@@ -1,19 +1,23 @@
 import type { Resume } from "../src/pdf/templates/resume.types.js";
 
 /**
- * Sample resume used to exercise the PDF pipeline.
+ * Sample resume used to exercise the PDF pipeline and to render the template
+ * previews shown in the product.
+ *
+ * Every detail is fictional. Contact values use reserved example domains and
+ * placeholder numbers so nothing here can resolve to a real person.
  *
  * Deliberately long enough to spill onto a second page (testing pagination and
  * page-break behaviour) and contains an ampersand in a company name to verify
  * HTML escaping.
  */
 export const sampleResume: Resume = {
-  fullName: "Fatai Igomigo",
+  fullName: "Alex Morgan",
   headline: "Senior Backend Engineer — Node.js, TypeScript, Distributed Systems",
   contact: {
-    email: "igomigofatai@gmail.com",
-    phone: "+234 801 234 5678",
-    location: "Lagos, Nigeria",
+    email: "alex.morgan@example.com",
+    phone: "+1 (555) 0142",
+    location: "Berlin, Germany",
     linkedin: "linkedin.com/in/example",
     portfolio: "github.com/example",
   },
@@ -41,9 +45,9 @@ export const sampleResume: Resume = {
   ],
   experience: [
     {
-      company: "Paystack & Partners",
+      company: "Northwind & Co.",
       role: "Senior Backend Engineer",
-      location: "Lagos, Nigeria",
+      location: "Berlin, Germany",
       startDate: "Mar 2022",
       endDate: "Present",
       bullets: [
@@ -54,7 +58,7 @@ export const sampleResume: Resume = {
       ],
     },
     {
-      company: "Flutterwave",
+      company: "Lumen Payments",
       role: "Backend Engineer",
       location: "Remote",
       startDate: "Jun 2020",
@@ -66,9 +70,9 @@ export const sampleResume: Resume = {
       ],
     },
     {
-      company: "Andela",
+      company: "Bridgeworks Studio",
       role: "Software Engineer",
-      location: "Lagos, Nigeria",
+      location: "Munich, Germany",
       startDate: "Jan 2019",
       endDate: "May 2020",
       bullets: [
@@ -79,7 +83,7 @@ export const sampleResume: Resume = {
   ],
   projects: [
     {
-      name: "AI Resume Builder",
+      name: "Resume Tailoring Tool",
       description:
         "Chat-driven resume tailoring tool that turns a job description and an existing CV into an ATS-friendly PDF.",
       technologies: ["Node.js", "TypeScript", "MongoDB", "Gotenberg", "OpenAI"],
@@ -97,15 +101,15 @@ export const sampleResume: Resume = {
   ],
   education: [
     {
-      school: "University of Lagos",
+      school: "Technical University of Berlin",
       degree: "B.Sc. Computer Science",
-      location: "Lagos, Nigeria",
+      location: "Berlin, Germany",
       startDate: "2014",
       endDate: "2018",
     },
   ],
   certifications: [
-    { name: "AWS Certified Solutions Architect – Associate", issuer: "Amazon Web Services", date: "2023" },
-    { name: "MongoDB Associate Developer", issuer: "MongoDB", date: "2022" },
+    { name: "Certified Cloud Solutions Architect", issuer: "Cloud Institute", date: "2023" },
+    { name: "Associate Database Developer", issuer: "Data Systems Guild", date: "2022" },
   ],
 };

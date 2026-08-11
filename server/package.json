@@ -12,6 +12,7 @@
     "render:html": "tsx scripts/render-html.ts"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/multer": "^2.2.0",
     "@types/node": "^24.0.0",
@@ -21,6 +22,7 @@
   "dependencies": {
     "@google/genai": "^2.16.0",
     "cloudinary": "^2.10.0",
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "mammoth": "^1.12.1",

@@ -12,6 +12,9 @@ const envSchema = z.object({
 
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
 
+  /** Origin allowed to call this API from a browser. */
+  CLIENT_URL: z.string().default("http://localhost:3000"),
+
   GOTENBERG_URL: z.string().url().default("http://localhost:3001"),
 
   AI_PROVIDER: z.enum(["openai", "gemini"]).default("openai"),

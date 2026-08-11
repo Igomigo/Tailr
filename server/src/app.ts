@@ -1,7 +1,9 @@
 import express, { type Express } from "express";
+import cors from "cors";
 import mongoose from "mongoose";
 import { errorHandler, notFoundHandler } from "./shared/error-middleware.js";
 import { chatRouter } from "./chat/chat.routes.js";
+import { env } from "./config/env.js";
 
 /**
  * Builds the Express application: middleware, routes, and error handling.
@@ -13,6 +15,10 @@ import { chatRouter } from "./chat/chat.routes.js";
  */
 export function createApp(): Express {
   const app = express();
+
+  // The client is served from a different origin in every environment, so
+  // browser requests need an explicit allow-list.
+  app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
 
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true }));

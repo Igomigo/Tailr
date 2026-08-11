@@ -4,6 +4,7 @@ import type {
   AiMessage,
   AiProvider,
   AiResponse,
+  AiToolCall,
   AiToolDefinition,
 } from "./ai-provider.interface.js";
 import { env } from "../config/env.js";
@@ -107,6 +108,53 @@ export function createOpenAiProvider(): AiProvider {
             : [],
         ),
       };
+    },
+
+    async *stream({ messages, tools }: AiCompletionRequest) {
+      let stream;
+      try {
+        stream = await client.chat.completions.create({
+          model: env.OPENAI_MODEL,
+          messages: toOpenAiMessages(messages),
+          ...(tools?.length ? { tools: toOpenAiTools(tools), tool_choice: "auto" as const } : {}),
+          stream: true,
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : "unknown error";
+        throw upstreamError(`OpenAI request failed: ${detail}`);
+      }
+
+      let text = "";
+      // Tool-call arguments arrive as fragments spread across chunks and are
+      // identified only by index, so they are accumulated before parsing.
+      const partial = new Map<number, { id: string; name: string; args: string }>();
+
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta;
+        if (!delta) continue;
+
+        if (delta.content) {
+          text += delta.content;
+          yield { type: "delta" as const, text: delta.content };
+        }
+
+        for (const call of delta.tool_calls ?? []) {
+          const existing = partial.get(call.index) ?? { id: "", name: "", args: "" };
+          partial.set(call.index, {
+            id: call.id ?? existing.id,
+            name: call.function?.name ?? existing.name,
+            args: existing.args + (call.function?.arguments ?? ""),
+          });
+        }
+      }
+
+      const toolCalls: AiToolCall[] = [...partial.values()].map((call) => ({
+        id: call.id,
+        name: call.name,
+        arguments: parseArguments(call.args, call.name),
+      }));
+
+      yield { type: "done" as const, response: { content: text || null, toolCalls } };
     },
   };
 }

@@ -8,3 +8,8 @@ chatRouter.post("/", chatController.createChat);
 chatRouter.get("/", chatController.listChats);
 chatRouter.get("/:chatId", chatController.getChat);
 chatRouter.post("/:chatId/message", uploadResumeFiles, chatController.sendMessage);
+chatRouter.post(
+  "/:chatId/message/stream",
+  uploadResumeFiles,
+  chatController.streamMessage,
+);

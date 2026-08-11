@@ -8,7 +8,7 @@ import {
 } from "./chat-message.model.js";
 import { notFound } from "../shared/errors.js";
 import * as aiService from "../ai/ai.service.js";
-import type { AiMessage } from "../ai/ai-provider.interface.js";
+import type { AiMessage, AiResponse } from "../ai/ai-provider.interface.js";
 import { getToolDefinitions, executeTool } from "../ai/tools/ai-tools.service.js";
 import {
   processUploadedFiles,
@@ -253,6 +253,151 @@ async function runAiTurn(session: ChatSessionDocument): Promise<ChatMessageDocum
   );
 
   return created;
+}
+
+/** Events emitted while a streamed turn runs. */
+export type ChatStreamEvent =
+  | { type: "user-message"; message: ChatMessageDocument }
+  | { type: "delta"; text: string }
+  | { type: "tool-start"; name: string }
+  | { type: "message"; message: ChatMessageDocument }
+  | { type: "error"; error: string };
+
+/**
+ * Handles a user message, streaming the assistant's reply as it is generated.
+ *
+ * Mirrors handleUserMessage but yields incremental events: the saved user
+ * message first, then text deltas, then each persisted message. When the model
+ * requests the PDF tool, a `tool-start` event lets the UI show progress during
+ * the seconds that generation takes.
+ *
+ * @param chatId - Target chat session.
+ * @param message - Raw user message text.
+ * @param files - Optional attachments.
+ */
+export async function* streamUserMessage(
+  chatId: string,
+  message: string,
+  files: IncomingFile[] = [],
+): AsyncGenerator<ChatStreamEvent> {
+  const session = await getChatSession(chatId);
+
+  const uploadedFiles = files.length
+    ? await processUploadedFiles(files, String(session._id))
+    : [];
+
+  const userMessage = await ChatMessageModel.create({
+    chatSessionId: session._id,
+    role: "user",
+    content: message,
+    ...(uploadedFiles.length
+      ? { attachments: uploadedFiles.map((file) => file._id) }
+      : {}),
+  });
+
+  const messageCount = await ChatMessageModel.countDocuments({
+    chatSessionId: session._id,
+  });
+
+  if (messageCount === 1) {
+    session.title = deriveTitle(message);
+    if (message.length >= JOB_DESCRIPTION_MIN_LENGTH) session.jobDescription = message;
+  }
+
+  const parsedText = combineParsedText(uploadedFiles);
+  if (parsedText) session.resumeContext = parsedText;
+
+  session.lastMessageAt = new Date();
+  await session.save();
+
+  yield { type: "user-message", message: userMessage };
+
+  const context = {
+    jobDescription: session.jobDescription,
+    resumeContext: session.resumeContext,
+  };
+
+  const history = await getRecentMessages(String(session._id));
+  let reply: AiResponse = { content: null, toolCalls: [] };
+
+  for await (const chunk of aiService.streamMessage(
+    toAiMessages(history),
+    context,
+    getToolDefinitions(),
+  )) {
+    if (chunk.type === "delta") {
+      yield { type: "delta", text: chunk.text };
+    } else {
+      reply = chunk.response;
+    }
+  }
+
+  if (!reply.toolCalls.length) {
+    yield {
+      type: "message",
+      message: await ChatMessageModel.create({
+        chatSessionId: session._id,
+        role: "assistant",
+        content: reply.content,
+      }),
+    };
+    return;
+  }
+
+  yield {
+    type: "message",
+    message: await ChatMessageModel.create({
+      chatSessionId: session._id,
+      role: "assistant",
+      content: reply.content,
+      toolCalls: reply.toolCalls,
+    }),
+  };
+
+  let documentUrl: string | null = null;
+
+  for (const call of reply.toolCalls) {
+    yield { type: "tool-start", name: call.name };
+
+    const result = await executeToolCall(call, String(session._id));
+    if (typeof result.documentUrl === "string") documentUrl = result.documentUrl;
+
+    yield {
+      type: "message",
+      message: await ChatMessageModel.create({
+        chatSessionId: session._id,
+        role: "tool",
+        toolCallId: call.id,
+        toolName: call.name,
+        content: JSON.stringify(result),
+      }),
+    };
+  }
+
+  const updatedHistory = await getRecentMessages(String(session._id));
+  let finalReply: AiResponse = { content: null, toolCalls: [] };
+
+  for await (const chunk of aiService.streamMessage(
+    toAiMessages(updatedHistory),
+    context,
+    getToolDefinitions(),
+  )) {
+    if (chunk.type === "delta") {
+      yield { type: "delta", text: chunk.text };
+    } else {
+      finalReply = chunk.response;
+    }
+  }
+
+  yield {
+    type: "message",
+    message: await ChatMessageModel.create({
+      chatSessionId: session._id,
+      role: "assistant",
+      content: finalReply.content ?? "Your resume is ready.",
+      documentUrl,
+    }),
+  };
 }
 
 /**
