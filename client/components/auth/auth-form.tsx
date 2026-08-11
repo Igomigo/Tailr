@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { transition } from "@/lib/motion";
 
+/** Kept in step with the same rule on the server. */
+const MIN_PASSWORD_LENGTH = 4;
+
 type Mode = "login" | "signup";
 
 const COPY = {
@@ -20,7 +23,7 @@ const COPY = {
   },
   signup: {
     heading: "Create your account",
-    subheading: "It takes a moment, and your resumes are saved for next time.",
+    subheading: "Name, email, and a password is all it takes to get started.",
     action: "Create account",
     switchPrompt: "Already have an account?",
     switchAction: "Sign in",
@@ -101,9 +104,9 @@ export function AuthForm({ initialMode = "login" }: { initialMode?: Mode }) {
           label="Password"
           type="password"
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
-          placeholder={mode === "signup" ? "At least 8 characters" : ""}
+          placeholder={mode === "signup" ? "At least 4 characters" : ""}
           required
-          minLength={mode === "signup" ? 8 : undefined}
+          minLength={mode === "signup" ? MIN_PASSWORD_LENGTH : undefined}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />

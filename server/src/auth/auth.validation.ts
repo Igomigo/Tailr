@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const MIN_PASSWORD_LENGTH = 8;
+const MIN_PASSWORD_LENGTH = 4;
 
 export const signupSchema = z.object({
   name: z.string().trim().min(1, "Please enter your name").max(80),

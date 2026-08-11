@@ -29,6 +29,8 @@ export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
 
   const sessionIdRef = useRef<string | undefined>(chatId);
   const abortRef = useRef<AbortController | null>(null);
+  // Kept so a failed turn can be resent without retyping.
+  const lastAttemptRef = useRef<{ text: string; files: File[] } | null>(null);
 
   useEffect(() => {
     sessionIdRef.current = chatId;
@@ -72,6 +74,7 @@ export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
       setError(null);
       setStatus("thinking");
       setStreamingText("");
+      lastAttemptRef.current = { text, files };
 
       // Shown immediately so the conversation responds before the network does.
       const optimistic: ChatMessage = {
@@ -86,13 +89,20 @@ export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      // Declared outside the try so the finally block can announce a newly
+      // created session after the stream has finished.
+      let id = sessionIdRef.current;
+      let created = false;
+
       try {
-        let id = sessionIdRef.current;
         if (!id) {
           const session = await api.createSession();
           id = session._id;
           sessionIdRef.current = id;
-          onSessionCreated?.(id);
+          // Deliberately not announced yet: telling the route now would send
+          // it to /chat/:id, remounting this hook and cutting off the stream
+          // below before a single token arrives.
+          created = true;
         }
 
         let streamed = "";
@@ -138,6 +148,9 @@ export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
 
             case "error":
               setError(event.error);
+              setMessages((current) =>
+                current.filter((message) => message._id !== optimistic._id),
+              );
               break;
 
             case "end":
@@ -147,12 +160,22 @@ export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
       } catch (cause: unknown) {
         if (cause instanceof Error && cause.name === "AbortError") return;
         setError(
-          cause instanceof Error ? cause.message : "Something went wrong",
+          cause instanceof Error
+            ? cause.message
+            : "Something went wrong. Please try again.",
+        );
+        // Remove the optimistic message so a retry does not duplicate it.
+        setMessages((current) =>
+          current.filter((message) => message._id !== optimistic._id),
         );
       } finally {
         setStatus("idle");
         setStreamingText("");
         abortRef.current = null;
+
+        // Announced only once the turn is over. The route change this triggers
+        // remounts the hook, which would abort a stream still in progress.
+        if (created && id) onSessionCreated?.(id);
       }
     },
     [onSessionCreated],
@@ -163,5 +186,11 @@ export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
     abortRef.current?.abort();
   }, []);
 
-  return { messages, streamingText, status, error, loading, send, stop };
+  /** Resends the message that failed. */
+  const retry = useCallback((): void => {
+    const attempt = lastAttemptRef.current;
+    if (attempt) void send(attempt.text, attempt.files);
+  }, [send]);
+
+  return { messages, streamingText, status, error, loading, send, stop, retry };
 }

@@ -10,7 +10,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const VARIANTS = {
   primary:
     "bg-[var(--color-accent)] text-[#1a1205] hover:bg-[var(--color-accent-hover)]",
-  ghost: "border border-white/12 text-ink hover:border-white/25 hover:bg-white/[0.05]",
+  ghost:
+    "border border-white/12 text-ink hover:border-white/25 hover:bg-white/[0.05]",
 } as const;
 
 /** A button, with a spinner that replaces its label while an action runs. */

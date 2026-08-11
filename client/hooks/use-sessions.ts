@@ -13,12 +13,20 @@ import type { ChatSession } from "@/lib/types";
 export function useSessions() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async (): Promise<void> => {
     try {
       setSessions(await api.listSessions());
-    } catch {
-      // The sidebar is not worth interrupting the conversation for.
+      setError(null);
+    } catch (cause: unknown) {
+      // Surfaced in the sidebar rather than swallowed, so an empty list is
+      // never mistaken for having no conversations.
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Could not load your conversations.",
+      );
     } finally {
       setLoading(false);
     }
@@ -28,5 +36,5 @@ export function useSessions() {
     void refresh();
   }, [refresh]);
 
-  return { sessions, loading, refresh };
+  return { sessions, loading, error, refresh };
 }

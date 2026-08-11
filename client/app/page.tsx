@@ -61,9 +61,9 @@ export default function LandingPage() {
           variants={rise}
           className="mx-auto mt-5 max-w-lg text-center text-ink-muted"
         >
-          Paste a job description, shape your experience through conversation,
-          and download a resume that is ready to send. It never invents
-          experience you do not have.
+          Paste a job description and upload your current resume, or start from
+          scratch. Shape it through natural conversation, then download a resume that is
+          ready to send.
         </motion.p>
 
         <motion.div variants={rise} className="mt-9 flex justify-center">

@@ -8,6 +8,7 @@ import { Sidebar } from "./sidebar/sidebar";
 import { SidebarToggle } from "./sidebar/sidebar-toggle";
 import { MessageList } from "./message-list";
 import { EmptyState } from "./empty-state";
+import { ErrorNotice } from "./error-notice";
 import { MessageInput } from "@/components/message-input";
 import { Logo } from "@/components/logo";
 import { useChat } from "@/hooks/use-chat";
@@ -25,17 +26,18 @@ export function ChatView({ chatId }: { chatId?: string }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const { collapsed, toggle } = useSidebar();
-  const { sessions, refresh } = useSessions();
+  const { sessions, error: sessionsError, refresh } = useSessions();
 
-  const { messages, streamingText, status, error, loading, send } = useChat({
-    chatId,
-    onSessionCreated: (id) => {
-      // Replace rather than push, so Back returns to where the user came from
-      // instead of an empty conversation they already left.
-      router.replace(`/chat/${id}`);
-      void refresh();
-    },
-  });
+  const { messages, streamingText, status, error, loading, send, retry } =
+    useChat({
+      chatId,
+      onSessionCreated: (id) => {
+        // Replace rather than push, so Back returns to where the user came from
+        // instead of an empty conversation they already left.
+        router.replace(`/chat/${id}`);
+        void refresh();
+      },
+    });
 
   const started = messages.length > 0;
   const busy = status !== "idle";
@@ -52,6 +54,7 @@ export function ChatView({ chatId }: { chatId?: string }) {
       <Sidebar
         sessions={sessions}
         activeId={chatId}
+        error={sessionsError}
         collapsed={collapsed}
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -101,16 +104,23 @@ export function ChatView({ chatId }: { chatId?: string }) {
                     placeholder="Reply, or ask for a change…"
                   />
                   {error && (
-                    <p className="mt-2.5 text-center text-micro text-[var(--color-danger)]">
-                      {error}
-                    </p>
+                    <div className="mt-3">
+                      <ErrorNotice message={error} onRetry={retry} />
+                    </div>
                   )}
                 </div>
               </div>
             </motion.div>
           )}
 
-          {view === "empty" && <EmptyState key="empty" onSubmit={send} />}
+          {view === "empty" && (
+            <EmptyState
+              key="empty"
+              onSubmit={send}
+              error={error}
+              onRetry={retry}
+            />
+          )}
 
           {view === "loading" && <div key="loading" className="flex-1" />}
         </AnimatePresence>

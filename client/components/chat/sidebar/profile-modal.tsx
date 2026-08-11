@@ -18,7 +18,12 @@ function formatJoined(iso: string): string {
 }
 
 /** Account details, opened from the sidebar. */
-export function ProfileModal({ user, open, onClose, onLogout }: ProfileModalProps) {
+export function ProfileModal({
+  user,
+  open,
+  onClose,
+  onLogout,
+}: ProfileModalProps) {
   return (
     <Modal open={open} onClose={onClose} title="Your account" size="sm">
       <div className="flex items-center gap-3.5">
@@ -26,15 +31,21 @@ export function ProfileModal({ user, open, onClose, onLogout }: ProfileModalProp
           {user.name.charAt(0).toUpperCase()}
         </span>
         <span className="min-w-0">
-          <span className="block truncate font-medium text-ink">{user.name}</span>
-          <span className="block truncate text-small text-ink-muted">{user.email}</span>
+          <span className="block truncate font-medium text-ink">
+            {user.name}
+          </span>
+          <span className="block truncate text-small text-ink-muted">
+            {user.email}
+          </span>
         </span>
       </div>
 
       <dl className="mt-6 flex flex-col gap-3 border-t border-[var(--color-line)] pt-5">
         <div className="flex items-center justify-between gap-4">
           <dt className="text-small text-ink-muted">Member since</dt>
-          <dd className="text-small text-ink">{formatJoined(user.createdAt)}</dd>
+          <dd className="text-small text-ink">
+            {formatJoined(user.createdAt)}
+          </dd>
         </div>
       </dl>
 

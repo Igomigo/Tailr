@@ -34,7 +34,6 @@ const PAGE_HEIGHT = 1414;
 export function TemplateGallery() {
   const [active, setActive] = useState<Template | null>(null);
 
-
   return (
     <>
       <div className="flex flex-col items-center gap-6">

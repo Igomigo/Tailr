@@ -9,6 +9,7 @@ import type {
 } from "./ai-provider.interface.js";
 import { env } from "../config/env.js";
 import { upstreamError } from "../shared/errors.js";
+import { toUserFacingAiError } from "./ai-error.js";
 
 /**
  * Splits the system prompt out of the message list.
@@ -151,8 +152,7 @@ export function createGeminiProvider(): AiProvider {
           },
         });
       } catch (error) {
-        const detail = error instanceof Error ? error.message : "unknown error";
-        throw upstreamError(`Gemini request failed: ${detail}`);
+        throw toUserFacingAiError(error, "gemini");
       }
 
       // Read parts directly rather than result.functionCalls: the thought
@@ -189,8 +189,7 @@ export function createGeminiProvider(): AiProvider {
           },
         });
       } catch (error) {
-        const detail = error instanceof Error ? error.message : "unknown error";
-        throw upstreamError(`Gemini request failed: ${detail}`);
+        throw toUserFacingAiError(error, "gemini");
       }
 
       let text = "";

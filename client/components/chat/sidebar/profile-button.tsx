@@ -33,7 +33,9 @@ export function ProfileButton() {
           {user.name.charAt(0).toUpperCase()}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-small text-ink">{user.name}</span>
+          <span className="block truncate text-small text-ink">
+            {user.name}
+          </span>
         </span>
       </button>
 

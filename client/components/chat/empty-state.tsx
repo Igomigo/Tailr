@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { MessageInput } from "@/components/message-input";
 import { TemplateGallery } from "@/components/template-gallery";
+import { ErrorNotice } from "./error-notice";
 import { rise, stagger } from "@/lib/motion";
 
 /**
@@ -13,8 +14,12 @@ import { rise, stagger } from "@/lib/motion";
  */
 export function EmptyState({
   onSubmit,
+  error,
+  onRetry,
 }: {
   onSubmit: (message: string, files: File[]) => void;
+  error?: string | null;
+  onRetry?: () => void;
 }) {
   return (
     <motion.div
@@ -40,6 +45,11 @@ export function EmptyState({
 
       <motion.div variants={rise} className="mt-8">
         <MessageInput autoFocus onSubmit={onSubmit} />
+        {error && (
+          <div className="mt-3">
+            <ErrorNotice message={error} onRetry={onRetry} />
+          </div>
+        )}
       </motion.div>
 
       <motion.div variants={rise} className="mt-14">

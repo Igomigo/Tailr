@@ -9,6 +9,7 @@ import type {
 } from "./ai-provider.interface.js";
 import { env } from "../config/env.js";
 import { upstreamError } from "../shared/errors.js";
+import { toUserFacingAiError } from "./ai-error.js";
 
 /** Translates neutral messages into the OpenAI chat format. */
 function toOpenAiMessages(
@@ -88,8 +89,7 @@ export function createOpenAiProvider(): AiProvider {
           ...(tools?.length ? { tools: toOpenAiTools(tools), tool_choice: "auto" } : {}),
         });
       } catch (error) {
-        const detail = error instanceof Error ? error.message : "unknown error";
-        throw upstreamError(`OpenAI request failed: ${detail}`);
+        throw toUserFacingAiError(error, "openai");
       }
 
       const choice = completion.choices[0]?.message;
@@ -120,8 +120,7 @@ export function createOpenAiProvider(): AiProvider {
           stream: true,
         });
       } catch (error) {
-        const detail = error instanceof Error ? error.message : "unknown error";
-        throw upstreamError(`OpenAI request failed: ${detail}`);
+        throw toUserFacingAiError(error, "openai");
       }
 
       let text = "";

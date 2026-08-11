@@ -129,7 +129,9 @@ export function Modal({
                 <div className="mb-5">
                   <h2 className="text-title font-semibold text-ink">{title}</h2>
                   {description && (
-                    <p className="mt-1 text-small text-ink-muted">{description}</p>
+                    <p className="mt-1 text-small text-ink-muted">
+                      {description}
+                    </p>
                   )}
                 </div>
               )}

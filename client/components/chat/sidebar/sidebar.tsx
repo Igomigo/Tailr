@@ -12,6 +12,8 @@ import type { ChatSession } from "@/lib/types";
 interface SidebarProps {
   sessions: ChatSession[];
   activeId?: string;
+  /** Shown in place of the list when sessions could not be loaded. */
+  error?: string | null;
   /** Collapses the desktop rail. Has no effect on the mobile drawer. */
   collapsed: boolean;
   /** Controls the mobile drawer. */
@@ -25,10 +27,18 @@ const RAIL_WIDTH_PX = 256;
 function SessionList({
   sessions,
   activeId,
+  error,
 }: {
   sessions: ChatSession[];
   activeId?: string;
+  error?: string | null;
 }) {
+  if (error) {
+    return (
+      <p className="px-3 py-2 text-micro text-[var(--color-danger)]">{error}</p>
+    );
+  }
+
   if (!sessions.length) {
     return (
       <p className="px-3 py-2 text-micro text-ink-faint">
@@ -60,10 +70,12 @@ function SessionList({
 function SidebarContent({
   sessions,
   activeId,
+  error,
   onNavigate,
 }: {
   sessions: ChatSession[];
   activeId?: string;
+  error?: string | null;
   onNavigate?: () => void;
 }) {
   return (
@@ -88,7 +100,7 @@ function SidebarContent({
       </Link>
 
       <nav className="mt-1 flex-1 overflow-y-auto" onClick={onNavigate}>
-        <SessionList sessions={sessions} activeId={activeId} />
+        <SessionList sessions={sessions} activeId={activeId} error={error} />
       </nav>
 
       <div className="border-t border-[var(--color-line)] pt-2">
@@ -107,6 +119,7 @@ function SidebarContent({
 export function Sidebar({
   sessions,
   activeId,
+  error,
   collapsed,
   open,
   onClose,
@@ -125,7 +138,11 @@ export function Sidebar({
         }}
       >
         <div style={{ width: RAIL_WIDTH_PX }} className="h-full">
-          <SidebarContent sessions={sessions} activeId={activeId} />
+          <SidebarContent
+            sessions={sessions}
+            activeId={activeId}
+            error={error}
+          />
         </div>
       </motion.aside>
 
@@ -158,6 +175,7 @@ export function Sidebar({
               <SidebarContent
                 sessions={sessions}
                 activeId={activeId}
+                error={error}
                 onNavigate={onClose}
               />
             </motion.aside>
