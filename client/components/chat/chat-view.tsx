@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { Menu } from "lucide-react";
 import { Sidebar } from "./sidebar/sidebar";
+import { SidebarToggle } from "./sidebar/sidebar-toggle";
 import { MessageList } from "./message-list";
 import { EmptyState } from "./empty-state";
 import { MessageInput } from "@/components/message-input";
 import { Logo } from "@/components/logo";
 import { useChat } from "@/hooks/use-chat";
 import { useSessions } from "@/hooks/use-sessions";
+import { useSidebar } from "@/hooks/use-sidebar";
 import { transition } from "@/lib/motion";
 
 /**
@@ -22,9 +24,10 @@ import { transition } from "@/lib/motion";
 export function ChatView({ chatId }: { chatId?: string }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { collapsed, toggle } = useSidebar();
   const { sessions, refresh } = useSessions();
 
-  const { messages, streamingText, status, error, send } = useChat({
+  const { messages, streamingText, status, error, loading, send } = useChat({
     chatId,
     onSessionCreated: (id) => {
       // Replace rather than push, so Back returns to where the user came from
@@ -37,30 +40,46 @@ export function ChatView({ chatId }: { chatId?: string }) {
   const started = messages.length > 0;
   const busy = status !== "idle";
 
+  /**
+   * Which view to show. While an existing conversation loads, neither is
+   * shown: rendering the empty state first would flash the new-chat screen
+   * before the messages arrive.
+   */
+  const view = loading ? "loading" : started ? "conversation" : "empty";
+
   return (
     <div className="flex h-dvh overflow-hidden bg-[var(--color-canvas)]">
       <Sidebar
         sessions={sessions}
         activeId={chatId}
+        collapsed={collapsed}
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
       />
 
       <main className="relative flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 px-4 md:hidden">
+        <header className="flex h-14 shrink-0 items-center gap-2 px-3 sm:px-4">
           <button
             type="button"
             aria-label="Open menu"
             onClick={() => setMenuOpen(true)}
-            className="rounded-[var(--radius-sm)] p-2 text-ink-muted transition-colors hover:bg-white/[0.06] hover:text-ink"
+            className="rounded-[var(--radius-sm)] p-2 text-ink-muted transition-colors hover:bg-white/[0.06] hover:text-ink md:hidden"
           >
             <Menu size={19} strokeWidth={1.75} />
           </button>
-          <Logo href="/chat" />
+
+          {/* Only reachable on desktop, where the rail is a permanent column. */}
+          <div className="hidden md:block">
+            <SidebarToggle collapsed={collapsed} onToggle={toggle} />
+          </div>
+
+          <div className="md:hidden">
+            <Logo href="/chat" />
+          </div>
         </header>
 
         <AnimatePresence mode="wait" initial={false}>
-          {started ? (
+          {view === "conversation" && (
             <motion.div
               key="conversation"
               initial={{ opacity: 0 }}
@@ -89,9 +108,11 @@ export function ChatView({ chatId }: { chatId?: string }) {
                 </div>
               </div>
             </motion.div>
-          ) : (
-            <EmptyState key="empty" onSubmit={send} />
           )}
+
+          {view === "empty" && <EmptyState key="empty" onSubmit={send} />}
+
+          {view === "loading" && <div key="loading" className="flex-1" />}
         </AnimatePresence>
       </main>
     </div>

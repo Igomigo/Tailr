@@ -11,10 +11,14 @@ import type { ChatSession } from "@/lib/types";
 interface SidebarProps {
   sessions: ChatSession[];
   activeId?: string;
-  /** Controls the mobile drawer; the desktop rail is always visible. */
+  /** Collapses the desktop rail. Has no effect on the mobile drawer. */
+  collapsed: boolean;
+  /** Controls the mobile drawer. */
   open: boolean;
   onClose: () => void;
 }
+
+const RAIL_WIDTH_PX = 256;
 
 /** Groups conversations under a heading once there are any. */
 function SessionList({
@@ -95,12 +99,30 @@ function SidebarContent({
  * A fixed rail on desktop, and a drawer over the conversation on mobile where
  * the screen cannot afford a permanent column.
  */
-export function Sidebar({ sessions, activeId, open, onClose }: SidebarProps) {
+export function Sidebar({
+  sessions,
+  activeId,
+  collapsed,
+  open,
+  onClose,
+}: SidebarProps) {
   return (
     <>
-      <aside className="hidden w-64 shrink-0 border-r border-[var(--color-line)] bg-[var(--color-surface)] md:block">
-        <SidebarContent sessions={sessions} activeId={activeId} />
-      </aside>
+      {/* Width is animated rather than toggled so the conversation reflows
+          alongside the rail instead of snapping to its new size. */}
+      <motion.aside
+        initial={false}
+        animate={{ width: collapsed ? 0 : RAIL_WIDTH_PX }}
+        transition={transition.base}
+        className="hidden shrink-0 overflow-hidden bg-surface md:block"
+        style={{
+          borderRight: collapsed ? "none" : "1px solid var(--color-line)",
+        }}
+      >
+        <div style={{ width: RAIL_WIDTH_PX }} className="h-full">
+          <SidebarContent sessions={sessions} activeId={activeId} />
+        </div>
+      </motion.aside>
 
       <AnimatePresence>
         {open && (
