@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { PenSquare, X } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { SessionItem } from "./session-item";
+import { ProfileButton } from "./profile-button";
 import { transition } from "@/lib/motion";
 import type { ChatSession } from "@/lib/types";
 
@@ -89,6 +90,10 @@ function SidebarContent({
       <nav className="mt-1 flex-1 overflow-y-auto" onClick={onNavigate}>
         <SessionList sessions={sessions} activeId={activeId} />
       </nav>
+
+      <div className="border-t border-[var(--color-line)] pt-2">
+        <ProfileButton />
+      </div>
     </div>
   );
 }

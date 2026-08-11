@@ -29,35 +29,43 @@ const TITLE_LENGTH = 60;
  *   arrives, at which point the session is retitled from that message.
  */
 export async function createChatSession(
+  userId: string,
   title?: string,
 ): Promise<ChatSessionDocument> {
-  return ChatSessionModel.create({ title: title ?? "New chat" });
+  return ChatSessionModel.create({ userId, title: title ?? "New chat" });
 }
 
-/** Lists chat sessions, most recently active first. */
-export async function listChatSessions(): Promise<ChatSessionDocument[]> {
-  return ChatSessionModel.find().sort({ lastMessageAt: -1 }).limit(50);
+/** Lists a user's chat sessions, most recently active first. */
+export async function listChatSessions(userId: string): Promise<ChatSessionDocument[]> {
+  return ChatSessionModel.find({ userId }).sort({ lastMessageAt: -1 }).limit(50);
 }
 
 /**
- * Loads a chat session by id.
+ * Loads a chat session the user owns.
  *
- * @throws AppError 404 when no session matches.
+ * A session belonging to someone else reports as not found rather than
+ * forbidden, so the response cannot be used to discover which ids exist.
+ *
+ * @throws AppError 404 when no session matches, or it belongs to another user.
  */
 export async function getChatSession(
   chatId: string,
+  userId: string,
 ): Promise<ChatSessionDocument> {
-  const session = await ChatSessionModel.findById(chatId);
+  const session = await ChatSessionModel.findOne({ _id: chatId, userId });
   if (!session) throw notFound("Chat session not found");
   return session;
 }
 
 /** Loads a session together with its messages in chronological order. */
-export async function getChatSessionWithMessages(chatId: string): Promise<{
+export async function getChatSessionWithMessages(
+  chatId: string,
+  userId: string,
+): Promise<{
   session: ChatSessionDocument;
   messages: ChatMessageDocument[];
 }> {
-  const session = await getChatSession(chatId);
+  const session = await getChatSession(chatId, userId);
   const messages = await ChatMessageModel.find({
     chatSessionId: session._id,
   }).sort({
@@ -133,10 +141,11 @@ const JOB_DESCRIPTION_MIN_LENGTH = 400;
  */
 export async function handleUserMessage(
   chatId: string,
+  userId: string,
   message: string,
   files: IncomingFile[] = [],
 ): Promise<{ session: ChatSessionDocument; messages: ChatMessageDocument[] }> {
-  const session = await getChatSession(chatId);
+  const session = await getChatSession(chatId, userId);
 
   const uploadedFiles = files.length
     ? await processUploadedFiles(files, String(session._id))
@@ -277,10 +286,11 @@ export type ChatStreamEvent =
  */
 export async function* streamUserMessage(
   chatId: string,
+  userId: string,
   message: string,
   files: IncomingFile[] = [],
 ): AsyncGenerator<ChatStreamEvent> {
-  const session = await getChatSession(chatId);
+  const session = await getChatSession(chatId, userId);
 
   const uploadedFiles = files.length
     ? await processUploadedFiles(files, String(session._id))

@@ -1,8 +1,12 @@
 import { Router } from "express";
 import * as chatController from "./chat.controller.js";
 import { uploadResumeFiles } from "../files/upload.middleware.js";
+import { requireAuth } from "../auth/auth.middleware.js";
 
 export const chatRouter = Router();
+
+// Every chat route is private: a conversation belongs to one account.
+chatRouter.use(requireAuth);
 
 chatRouter.post("/", chatController.createChat);
 chatRouter.get("/", chatController.listChats);

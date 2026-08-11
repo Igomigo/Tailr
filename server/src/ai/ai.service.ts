@@ -69,6 +69,38 @@ function capResumeText(text: string): string {
 }
 
 /**
+ * Describes the current date for the model.
+ *
+ * Language models have no clock and no notion of today's date, so without this
+ * they cannot work out whether a role is current, how long someone has been in
+ * a job, or what "the last three years" covers. Computed per request so a
+ * long-running server never serves a stale date.
+ */
+function currentDateContext(): string {
+  const now = new Date();
+
+  const full = now.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
+  const time = now.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
+
+  return [
+    `Today's date is ${full}. The current time is ${time} UTC.`,
+    `The current year is ${now.getUTCFullYear()}.`,
+    "Use this whenever dates matter: working out how long someone has held a role, deciding whether a position is current, judging how recent a qualification is, or interpreting phrases such as \"last year\". Never guess the date or rely on your training data for it.",
+  ].join(" ");
+}
+
+/**
  * Builds the message list sent to the model.
  *
  * Session context is re-injected only when it has dropped out of the replayed
@@ -83,6 +115,7 @@ function capResumeText(text: string): string {
 export function buildMessages(history: AiMessage[], context: SessionContext = {}): AiMessage[] {
   const messages: AiMessage[] = [
     { role: "system", content: RESUME_CHAT_SYSTEM_PROMPT },
+    { role: "system", content: currentDateContext() },
   ];
 
   const pinned: string[] = [];

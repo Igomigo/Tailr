@@ -36,7 +36,7 @@ export default function LandingPage() {
       >
         <Logo />
         <Link
-          href="/chat"
+          href="/auth"
           className="rounded-full px-4 py-2 text-small text-ink-muted transition-colors duration-150 hover:bg-white/[0.06] hover:text-ink"
         >
           Sign in
@@ -68,7 +68,7 @@ export default function LandingPage() {
 
         <motion.div variants={rise} className="mt-9 flex justify-center">
           <Link
-            href="/chat"
+            href="/auth?mode=signup"
             className="
               group flex items-center gap-2 rounded-full
               bg-[var(--color-accent)] px-6 py-3.5

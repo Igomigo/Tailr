@@ -16,6 +16,9 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
+    // The session lives in an httpOnly cookie, which is only sent when
+    // credentials are included on a cross-origin request.
+    credentials: "include",
     headers: { "Content-Type": "application/json", ...init?.headers },
   });
 
@@ -74,6 +77,7 @@ export async function* streamMessage(
 
   const response = await fetch(`${API_URL}/chat/${chatId}/message/stream`, {
     method: "POST",
+    credentials: "include",
     body,
     signal,
   });
@@ -100,5 +104,47 @@ export async function* streamMessage(
       if (!line.startsWith("data: ")) continue;
       yield JSON.parse(line.slice(6)) as ChatStreamEvent;
     }
+  }
+}
+
+/** The signed-in account. */
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+}
+
+export async function signup(
+  name: string,
+  email: string,
+  password: string,
+): Promise<AuthUser> {
+  const { user } = await request<{ user: AuthUser }>("/auth/signup", {
+    method: "POST",
+    body: JSON.stringify({ name, email, password }),
+  });
+  return user;
+}
+
+export async function login(email: string, password: string): Promise<AuthUser> {
+  const { user } = await request<{ user: AuthUser }>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+  return user;
+}
+
+export async function logout(): Promise<void> {
+  await request("/auth/logout", { method: "POST" });
+}
+
+/** Returns the signed-in user, or null when there is no valid session. */
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  try {
+    const { user } = await request<{ user: AuthUser }>("/auth/me");
+    return user;
+  } catch {
+    return null;
   }
 }

@@ -1,8 +1,10 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import { errorHandler, notFoundHandler } from "./shared/error-middleware.js";
 import { chatRouter } from "./chat/chat.routes.js";
+import { authRouter } from "./auth/auth.routes.js";
 import { env } from "./config/env.js";
 
 /**
@@ -20,6 +22,7 @@ export function createApp(): Express {
   // browser requests need an explicit allow-list.
   app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
 
+  app.use(cookieParser());
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true }));
 
@@ -33,6 +36,7 @@ export function createApp(): Express {
     });
   });
 
+  app.use("/auth", authRouter);
   app.use("/chat", chatRouter);
 
   app.use(notFoundHandler);
