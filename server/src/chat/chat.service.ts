@@ -16,6 +16,7 @@ import {
   type IncomingFile,
 } from "../files/uploaded-file.service.js";
 import { condenseResume } from "../ai/resume-condense.service.js";
+import { UploadedFileModel } from "../files/uploaded-file.model.js";
 
 /** How many recent messages are replayed as AI context. */
 const HISTORY_LIMIT = 20;
@@ -56,6 +57,46 @@ export async function getChatSession(
   const session = await ChatSessionModel.findOne({ _id: chatId, userId });
   if (!session) throw notFound("Chat session not found");
   return session;
+}
+
+/**
+ * Renames a chat session.
+ *
+ * @param chatId - Session to rename.
+ * @param userId - Owner, so another user's session cannot be renamed.
+ * @param title - New title.
+ * @throws AppError 404 when the session does not exist or belongs to someone else.
+ */
+export async function renameChatSession(
+  chatId: string,
+  userId: string,
+  title: string,
+): Promise<ChatSessionDocument> {
+  const session = await getChatSession(chatId, userId);
+  session.title = title;
+  await session.save();
+  return session;
+}
+
+/**
+ * Deletes a chat session and everything belonging to it.
+ *
+ * Messages and uploaded-file records are removed too, since neither is
+ * reachable once its session is gone.
+ *
+ * @param chatId - Session to delete.
+ * @param userId - Owner, so another user's session cannot be deleted.
+ * @throws AppError 404 when the session does not exist or belongs to someone else.
+ */
+export async function deleteChatSession(chatId: string, userId: string): Promise<void> {
+  const session = await getChatSession(chatId, userId);
+
+  await Promise.all([
+    ChatMessageModel.deleteMany({ chatSessionId: session._id }),
+    UploadedFileModel.deleteMany({ chatSessionId: session._id }),
+  ]);
+
+  await session.deleteOne();
 }
 
 /** Loads a session together with its messages in chronological order. */

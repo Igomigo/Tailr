@@ -32,9 +32,52 @@ export function useSessions() {
     }
   }, []);
 
+  /**
+   * Renames a session, updating the list before the request completes.
+   *
+   * The new title is already on screen in the input the user just typed into,
+   * so waiting for the server before showing it would look like a stall.
+   */
+  const rename = useCallback(
+    async (chatId: string, title: string): Promise<void> => {
+      const previous = sessions;
+      setSessions((current) =>
+        current.map((session) =>
+          session._id === chatId ? { ...session, title } : session,
+        ),
+      );
+
+      try {
+        await api.renameSession(chatId, title);
+      } catch {
+        setSessions(previous);
+        setError("Could not rename that conversation.");
+      }
+    },
+    [sessions],
+  );
+
+  /** Removes a session, updating the list before the request completes. */
+  const remove = useCallback(
+    async (chatId: string): Promise<void> => {
+      const previous = sessions;
+      setSessions((current) =>
+        current.filter((session) => session._id !== chatId),
+      );
+
+      try {
+        await api.deleteSession(chatId);
+      } catch {
+        setSessions(previous);
+        setError("Could not delete that conversation.");
+      }
+    },
+    [sessions],
+  );
+
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  return { sessions, loading, error, refresh };
+  return { sessions, loading, error, refresh, rename, remove };
 }

@@ -11,6 +11,8 @@ chatRouter.use(requireAuth);
 chatRouter.post("/", chatController.createChat);
 chatRouter.get("/", chatController.listChats);
 chatRouter.get("/:chatId", chatController.getChat);
+chatRouter.patch("/:chatId", chatController.renameChat);
+chatRouter.delete("/:chatId", chatController.deleteChat);
 chatRouter.post("/:chatId/message", uploadResumeFiles, chatController.sendMessage);
 chatRouter.post(
   "/:chatId/message/stream",

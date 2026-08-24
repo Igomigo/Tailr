@@ -3,6 +3,7 @@ import * as chatService from "./chat.service.js";
 import {
   chatIdParamSchema,
   createChatSchema,
+  renameChatSchema,
   sendMessageSchema,
 } from "./chat.validation.js";
 import { AppError } from "../shared/errors.js";
@@ -34,6 +35,21 @@ export async function getChat(req: Request, res: Response): Promise<void> {
     requireUserId(req),
   );
   res.json({ success: true, session, messages });
+}
+
+/** PATCH /chat/:chatId — renames a chat session. */
+export async function renameChat(req: Request, res: Response): Promise<void> {
+  const { chatId } = chatIdParamSchema.parse(req.params);
+  const { title } = renameChatSchema.parse(req.body ?? {});
+  const session = await chatService.renameChatSession(chatId, requireUserId(req), title);
+  res.json({ success: true, session });
+}
+
+/** DELETE /chat/:chatId — deletes a chat session and its messages. */
+export async function deleteChat(req: Request, res: Response): Promise<void> {
+  const { chatId } = chatIdParamSchema.parse(req.params);
+  await chatService.deleteChatSession(chatId, requireUserId(req));
+  res.json({ success: true });
 }
 
 /**

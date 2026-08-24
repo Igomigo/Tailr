@@ -10,6 +10,8 @@ import { MessageList } from "./message-list";
 import { EmptyState } from "./empty-state";
 import { ErrorNotice } from "./error-notice";
 import { Notice } from "./notice";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
 import { MessageInput } from "@/components/message-input";
 import { Logo } from "@/components/logo";
 import { useChat } from "@/hooks/use-chat";
@@ -27,7 +29,14 @@ export function ChatView({ chatId }: { chatId?: string }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const { collapsed, toggle } = useSidebar();
-  const { sessions, error: sessionsError, refresh } = useSessions();
+  const {
+    sessions,
+    error: sessionsError,
+    refresh,
+    rename,
+    remove,
+  } = useSessions();
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   const {
     messages,
@@ -64,6 +73,8 @@ export function ChatView({ chatId }: { chatId?: string }) {
         sessions={sessions}
         activeId={chatId}
         error={sessionsError}
+        onRename={rename}
+        onDelete={setPendingDelete}
         collapsed={collapsed}
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -139,6 +150,33 @@ export function ChatView({ chatId }: { chatId?: string }) {
           {view === "loading" && <div key="loading" className="flex-1" />}
         </AnimatePresence>
       </main>
+
+      <Modal
+        open={Boolean(pendingDelete)}
+        onClose={() => setPendingDelete(null)}
+        title="Delete this conversation?"
+        description="The messages and any resumes generated in it will be removed. This cannot be undone."
+        size="sm"
+        showClose={false}
+      >
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => setPendingDelete(null)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              const id = pendingDelete!;
+              setPendingDelete(null);
+              void remove(id);
+              // Leave a conversation that no longer exists.
+              if (id === chatId) router.push("/chat");
+            }}
+            className="bg-[var(--color-danger)] text-white hover:bg-[var(--color-danger)]/85"
+          >
+            Delete
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -14,6 +14,8 @@ interface SidebarProps {
   activeId?: string;
   /** Shown in place of the list when sessions could not be loaded. */
   error?: string | null;
+  onRename: (chatId: string, title: string) => Promise<void>;
+  onDelete: (chatId: string) => void;
   /** Collapses the desktop rail. Has no effect on the mobile drawer. */
   collapsed: boolean;
   /** Controls the mobile drawer. */
@@ -28,10 +30,14 @@ function SessionList({
   sessions,
   activeId,
   error,
+  onRename,
+  onDelete,
 }: {
   sessions: ChatSession[];
   activeId?: string;
   error?: string | null;
+  onRename: (chatId: string, title: string) => Promise<void>;
+  onDelete: (chatId: string) => void;
 }) {
   if (error) {
     return (
@@ -59,6 +65,8 @@ function SessionList({
             id={session._id}
             title={session.title}
             active={session._id === activeId}
+            onRename={onRename}
+            onDelete={onDelete}
           />
         ))}
       </ul>
@@ -71,11 +79,15 @@ function SidebarContent({
   sessions,
   activeId,
   error,
+  onRename,
+  onDelete,
   onNavigate,
 }: {
   sessions: ChatSession[];
   activeId?: string;
   error?: string | null;
+  onRename: (chatId: string, title: string) => Promise<void>;
+  onDelete: (chatId: string) => void;
   onNavigate?: () => void;
 }) {
   return (
@@ -100,7 +112,13 @@ function SidebarContent({
       </Link>
 
       <nav className="mt-1 flex-1 overflow-y-auto" onClick={onNavigate}>
-        <SessionList sessions={sessions} activeId={activeId} error={error} />
+        <SessionList
+          sessions={sessions}
+          activeId={activeId}
+          error={error}
+          onRename={onRename}
+          onDelete={onDelete}
+        />
       </nav>
 
       <div className="border-t border-[var(--color-line)] pt-2">
@@ -123,6 +141,8 @@ export function Sidebar({
   collapsed,
   open,
   onClose,
+  onRename,
+  onDelete,
 }: SidebarProps) {
   return (
     <>
@@ -142,6 +162,8 @@ export function Sidebar({
             sessions={sessions}
             activeId={activeId}
             error={error}
+            onRename={onRename}
+            onDelete={onDelete}
           />
         </div>
       </motion.aside>
@@ -176,6 +198,8 @@ export function Sidebar({
                 sessions={sessions}
                 activeId={activeId}
                 error={error}
+                onRename={onRename}
+                onDelete={onDelete}
                 onNavigate={onClose}
               />
             </motion.aside>

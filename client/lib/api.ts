@@ -54,6 +54,26 @@ export async function getSession(
   return request(`/chat/${chatId}`);
 }
 
+/** Renames a chat session. */
+export async function renameSession(
+  chatId: string,
+  title: string,
+): Promise<ChatSession> {
+  const { session } = await request<{ session: ChatSession }>(
+    `/chat/${chatId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ title }),
+    },
+  );
+  return session;
+}
+
+/** Deletes a chat session and its messages. */
+export async function deleteSession(chatId: string): Promise<void> {
+  await request(`/chat/${chatId}`, { method: "DELETE" });
+}
+
 /**
  * Sends a message and yields streamed events as they arrive.
  *

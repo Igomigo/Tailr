@@ -5,6 +5,10 @@ export const chatIdParamSchema = z.object({
   chatId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid chat id"),
 });
 
+export const renameChatSchema = z.object({
+  title: z.string().trim().min(1, "Title cannot be empty").max(200),
+});
+
 export const createChatSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
 });
