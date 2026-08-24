@@ -127,7 +127,10 @@ export async function signup(
   return user;
 }
 
-export async function login(email: string, password: string): Promise<AuthUser> {
+export async function login(
+  email: string,
+  password: string,
+): Promise<AuthUser> {
   const { user } = await request<{ user: AuthUser }>("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),

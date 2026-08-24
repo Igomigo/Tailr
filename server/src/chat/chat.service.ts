@@ -15,6 +15,7 @@ import {
   combineParsedText,
   type IncomingFile,
 } from "../files/uploaded-file.service.js";
+import { condenseResume } from "../ai/resume-condense.service.js";
 
 /** How many recent messages are replayed as AI context. */
 const HISTORY_LIMIT = 20;
@@ -93,6 +94,28 @@ export async function getRecentMessages(
   return messages.reverse();
 }
 
+/**
+ * Stores uploaded resume text on the session, condensing it when too long.
+ *
+ * @param session - Session to update.
+ * @param uploadedFiles - Files attached to this message.
+ * @returns A note to show the user when the resume had to be shortened.
+ */
+async function applyResumeContext(
+  session: ChatSessionDocument,
+  uploadedFiles: Awaited<ReturnType<typeof processUploadedFiles>>,
+): Promise<string | null> {
+  const parsedText = combineParsedText(uploadedFiles);
+  if (!parsedText) return null;
+
+  const { text, wasCondensed } = await condenseResume(parsedText);
+  session.resumeContext = text;
+
+  return wasCondensed
+    ? "Your resume was long, so I summarised it to fit. I kept every role, date, and qualification, but if a specific detail matters, paste it into the chat."
+    : null;
+}
+
 /** Derives a readable session title from the first user message. */
 function deriveTitle(message: string): string {
   const collapsed = message.replace(/\s+/g, " ").trim();
@@ -156,7 +179,14 @@ export async function handleUserMessage(
     role: "user",
     content: message,
     ...(uploadedFiles.length
-      ? { attachments: uploadedFiles.map((file) => file._id) }
+      ? {
+          attachments: uploadedFiles.map((file) => ({
+            fileId: file._id,
+            fileName: file.fileName,
+            mimeType: file.mimeType,
+            sizeBytes: file.sizeBytes,
+          })),
+        }
       : {}),
   });
 
@@ -170,9 +200,9 @@ export async function handleUserMessage(
   }
 
   // Pinned to the session so the resume stays available on every later turn,
-  // even once this message falls outside the recent-history window.
-  const parsedText = combineParsedText(uploadedFiles);
-  if (parsedText) session.resumeContext = parsedText;
+  // even once this message falls outside the recent-history window. This
+  // endpoint has no channel for the condensing notice; the streaming one does.
+  await applyResumeContext(session, uploadedFiles);
 
   session.lastMessageAt = new Date();
   await session.save();
@@ -267,6 +297,7 @@ async function runAiTurn(session: ChatSessionDocument): Promise<ChatMessageDocum
 /** Events emitted while a streamed turn runs. */
 export type ChatStreamEvent =
   | { type: "user-message"; message: ChatMessageDocument }
+  | { type: "notice"; text: string }
   | { type: "delta"; text: string }
   | { type: "tool-start"; name: string }
   | { type: "message"; message: ChatMessageDocument }
@@ -301,7 +332,14 @@ export async function* streamUserMessage(
     role: "user",
     content: message,
     ...(uploadedFiles.length
-      ? { attachments: uploadedFiles.map((file) => file._id) }
+      ? {
+          attachments: uploadedFiles.map((file) => ({
+            fileId: file._id,
+            fileName: file.fileName,
+            mimeType: file.mimeType,
+            sizeBytes: file.sizeBytes,
+          })),
+        }
       : {}),
   });
 
@@ -314,13 +352,14 @@ export async function* streamUserMessage(
     if (message.length >= JOB_DESCRIPTION_MIN_LENGTH) session.jobDescription = message;
   }
 
-  const parsedText = combineParsedText(uploadedFiles);
-  if (parsedText) session.resumeContext = parsedText;
+  const condenseNotice = await applyResumeContext(session, uploadedFiles);
 
   session.lastMessageAt = new Date();
   await session.save();
 
   yield { type: "user-message", message: userMessage };
+
+  if (condenseNotice) yield { type: "notice", text: condenseNotice };
 
   const context = {
     jobDescription: session.jobDescription,

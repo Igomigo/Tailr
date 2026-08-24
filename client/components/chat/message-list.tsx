@@ -57,7 +57,11 @@ export function MessageList({
       <div className="mx-auto flex w-full max-w-[46rem] flex-col gap-7 px-5 pb-10 pt-8 sm:px-6">
         {messages.map((message) =>
           message.role === "user" ? (
-            <UserMessage key={message._id} content={message.content ?? ""} />
+            <UserMessage
+              key={message._id}
+              content={message.content ?? ""}
+              attachments={message.attachments}
+            />
           ) : (
             <AssistantMessage
               key={message._id}

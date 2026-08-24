@@ -25,6 +25,7 @@ export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
   const [streamingText, setStreamingText] = useState("");
   const [status, setStatus] = useState<ChatStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(chatId));
 
   const sessionIdRef = useRef<string | undefined>(chatId);
@@ -72,6 +73,7 @@ export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
   const send = useCallback(
     async (text: string, files: File[] = []): Promise<void> => {
       setError(null);
+      setNotice(null);
       setStatus("thinking");
       setStreamingText("");
       lastAttemptRef.current = { text, files };
@@ -82,6 +84,14 @@ export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
         chatSessionId: sessionIdRef.current ?? "",
         role: "user",
         content: text,
+        // Shown from the local files so an attachment appears immediately
+        // rather than materialising when the server echoes the message back.
+        attachments: files.map((file, index) => ({
+          fileId: `pending-${index}`,
+          fileName: file.name,
+          mimeType: file.type,
+          sizeBytes: file.size,
+        })),
         createdAt: new Date().toISOString(),
       };
       setMessages((current) => [...current, optimistic]);
@@ -127,6 +137,10 @@ export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
               streamed += event.text;
               setStreamingText(streamed);
               setStatus("streaming");
+              break;
+
+            case "notice":
+              setNotice(event.text);
               break;
 
             case "tool-start":
@@ -192,5 +206,15 @@ export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
     if (attempt) void send(attempt.text, attempt.files);
   }, [send]);
 
-  return { messages, streamingText, status, error, loading, send, stop, retry };
+  return {
+    messages,
+    streamingText,
+    status,
+    error,
+    notice,
+    loading,
+    send,
+    stop,
+    retry,
+  };
 }

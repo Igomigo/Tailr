@@ -40,13 +40,20 @@ export interface SessionContext {
 }
 
 /**
- * Upper bound on injected resume text, roughly 6 to 8 pages.
+ * Ceiling on the whole request, in characters.
  *
- * Resumes beyond this are truncated: the opening pages carry contact details
- * and recent roles, which is what tailoring depends on, and an unbounded
- * document would otherwise dominate every request.
+ * Providers reject an over-large request outright, so the user gets an error
+ * instead of a reply. Budgeting the request here keeps it under the limit of
+ * the least generous provider we support (Groq's free tier allows 8,000 tokens
+ * per minute, and roughly four characters make a token).
  */
-const MAX_RESUME_CONTEXT_CHARS = 12_000;
+const MAX_REQUEST_CHARS = 26_000;
+
+/** Room reserved for the model's own reply within that ceiling. */
+const RESPONSE_HEADROOM_CHARS = 4_000;
+
+/** Never trim the resume below this: less than a page is not worth sending. */
+const MIN_RESUME_CHARS = 2_500;
 
 /**
  * Reports whether pinned text already appears in the replayed history.
@@ -59,13 +66,18 @@ function alreadyInHistory(history: AiMessage[], text: string): boolean {
   return history.some((message) => message.content?.includes(probe));
 }
 
-/** Truncates over-long resume text at a paragraph boundary where possible. */
-function capResumeText(text: string): string {
-  if (text.length <= MAX_RESUME_CONTEXT_CHARS) return text;
-  const clipped = text.slice(0, MAX_RESUME_CONTEXT_CHARS);
+/**
+ * Trims text to a budget, cutting at a line break where one is close by.
+ *
+ * @param text - Text to trim.
+ * @param budget - Maximum characters to keep.
+ */
+function trimTo(text: string, budget: number): string {
+  if (text.length <= budget) return text;
+  const clipped = text.slice(0, budget);
   const lastBreak = clipped.lastIndexOf("\n");
-  const body = lastBreak > MAX_RESUME_CONTEXT_CHARS * 0.8 ? clipped.slice(0, lastBreak) : clipped;
-  return `${body}\n\n[Resume truncated. Ask the user about anything missing rather than assuming.]`;
+  const body = lastBreak > budget * 0.8 ? clipped.slice(0, lastBreak) : clipped;
+  return `${body}\n\n[Truncated. Ask the user about anything missing rather than assuming.]`;
 }
 
 /**
@@ -113,29 +125,57 @@ function currentDateContext(): string {
  * @param context - Session-level content available for injection.
  */
 export function buildMessages(history: AiMessage[], context: SessionContext = {}): AiMessage[] {
+  const dateContext = currentDateContext();
+
   const messages: AiMessage[] = [
     { role: "system", content: RESUME_CHAT_SYSTEM_PROMPT },
-    { role: "system", content: currentDateContext() },
+    { role: "system", content: dateContext },
   ];
+
+  // Everything the request must carry regardless, plus room for the reply.
+  const fixedCost =
+    RESUME_CHAT_SYSTEM_PROMPT.length + dateContext.length + RESPONSE_HEADROOM_CHARS;
+
+  let budget = MAX_REQUEST_CHARS - fixedCost;
+
+  // History is trimmed first, oldest dropped, because the pinned job
+  // description and resume are what the model actually needs to tailor with.
+  const trimmedHistory: AiMessage[] = [];
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const entry = history[index]!;
+    const cost = (entry.content?.length ?? 0) + 40;
+    if (cost > budget) break;
+    budget -= cost;
+    trimmedHistory.unshift(entry);
+  }
 
   const pinned: string[] = [];
 
   if (context.jobDescription && !alreadyInHistory(history, context.jobDescription)) {
-    pinned.push(`## Target job description\n\n${context.jobDescription}`);
+    const heading = "## Target job description\n\n";
+    const share = Math.max(0, Math.min(context.jobDescription.length, budget - MIN_RESUME_CHARS));
+    if (share > 0) {
+      const text = trimTo(context.jobDescription, share);
+      pinned.push(heading + text);
+      budget -= heading.length + text.length;
+    }
   }
 
   if (context.resumeContext && !alreadyInHistory(history, context.resumeContext)) {
-    pinned.push(
-      `## Text extracted from the user's uploaded resume\n\n${capResumeText(context.resumeContext)}`,
-    );
+    const heading = "## Text extracted from the user's uploaded resume\n\n";
+    const share = budget - heading.length;
+    if (share > 0) {
+      pinned.push(heading + trimTo(context.resumeContext, share));
+    }
   }
 
   if (pinned.length) {
     messages.push({ role: "system", content: pinned.join("\n\n") });
   }
 
-  return [...messages, ...history];
+  return [...messages, ...trimmedHistory];
 }
+
 
 /**
  * Sends a conversation to the configured provider.

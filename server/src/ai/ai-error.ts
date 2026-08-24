@@ -19,25 +19,31 @@ function describeWait(seconds: number): string {
 }
 
 /**
- * Extracts a retry delay from a provider error.
+ * Extracts a retry delay from a provider error, in seconds.
  *
- * Providers express this differently: Gemini uses "retry in 41.6s" and a
- * retryDelay field, while OpenAI uses "try again in 20s".
+ * Providers write this several ways: Groq uses "try again in 24.87s" and
+ * "try again in 3m21.5s", while Gemini uses "retry in 41.6s" and a retryDelay
+ * field. Compound values must be read whole, since matching only the leading
+ * number would report three seconds for a three-minute wait.
  */
 function extractRetrySeconds(raw: string): number | null {
-  const patterns = [
-    /retry in ([\d.]+)s/i,
-    /try again in ([\d.]+)\s*s/i,
-    /"retryDelay"\s*:\s*"([\d.]+)s"/i,
-    /try again in ([\d.]+)\s*m/i,
-  ];
+  // Matches "3m21.5s", "3m", "21.5s", with an optional hours component.
+  const compound =
+    /(?:retry|try again) in\s*(?:([\d.]+)h)?\s*(?:([\d.]+)m)?\s*(?:([\d.]+)s)?/i.exec(raw);
 
-  for (const pattern of patterns) {
-    const match = pattern.exec(raw);
-    if (!match) continue;
-    const value = Number(match[1]);
-    if (Number.isNaN(value)) continue;
-    return pattern.source.includes("m") && !pattern.source.includes("s") ? value * 60 : value;
+  if (compound && (compound[1] || compound[2] || compound[3])) {
+    const hours = Number(compound[1] ?? 0);
+    const minutes = Number(compound[2] ?? 0);
+    const seconds = Number(compound[3] ?? 0);
+    const total = hours * 3600 + minutes * 60 + seconds;
+    if (total > 0) return total;
+  }
+
+  // Gemini reports the same information in a structured field.
+  const retryDelay = /"retryDelay"\s*:\s*"([\d.]+)s"/i.exec(raw);
+  if (retryDelay) {
+    const value = Number(retryDelay[1]);
+    if (!Number.isNaN(value) && value > 0) return value;
   }
 
   return null;

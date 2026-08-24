@@ -9,6 +9,7 @@ import { SidebarToggle } from "./sidebar/sidebar-toggle";
 import { MessageList } from "./message-list";
 import { EmptyState } from "./empty-state";
 import { ErrorNotice } from "./error-notice";
+import { Notice } from "./notice";
 import { MessageInput } from "@/components/message-input";
 import { Logo } from "@/components/logo";
 import { useChat } from "@/hooks/use-chat";
@@ -28,16 +29,24 @@ export function ChatView({ chatId }: { chatId?: string }) {
   const { collapsed, toggle } = useSidebar();
   const { sessions, error: sessionsError, refresh } = useSessions();
 
-  const { messages, streamingText, status, error, loading, send, retry } =
-    useChat({
-      chatId,
-      onSessionCreated: (id) => {
-        // Replace rather than push, so Back returns to where the user came from
-        // instead of an empty conversation they already left.
-        router.replace(`/chat/${id}`);
-        void refresh();
-      },
-    });
+  const {
+    messages,
+    streamingText,
+    status,
+    error,
+    notice,
+    loading,
+    send,
+    retry,
+  } = useChat({
+    chatId,
+    onSessionCreated: (id) => {
+      // Replace rather than push, so Back returns to where the user came from
+      // instead of an empty conversation they already left.
+      router.replace(`/chat/${id}`);
+      void refresh();
+    },
+  });
 
   const started = messages.length > 0;
   const busy = status !== "idle";
@@ -103,6 +112,11 @@ export function ChatView({ chatId }: { chatId?: string }) {
                     disabled={busy}
                     placeholder="Reply, or ask for a change…"
                   />
+                  {notice && (
+                    <div className="mt-3">
+                      <Notice message={notice} />
+                    </div>
+                  )}
                   {error && (
                     <div className="mt-3">
                       <ErrorNotice message={error} onRetry={retry} />

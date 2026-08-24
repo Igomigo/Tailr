@@ -138,7 +138,7 @@ export function createGeminiProvider(): AiProvider {
   return {
     name: "gemini",
 
-    async complete({ messages, tools }: AiCompletionRequest): Promise<AiResponse> {
+    async complete({ messages, tools, temperature, maxTokens }: AiCompletionRequest): Promise<AiResponse> {
       const { systemInstruction, rest } = extractSystemInstruction(messages);
 
       let result;
@@ -148,6 +148,8 @@ export function createGeminiProvider(): AiProvider {
           contents: toGeminiContents(rest),
           config: {
             ...(systemInstruction ? { systemInstruction } : {}),
+            ...(temperature !== undefined ? { temperature } : {}),
+            ...(maxTokens !== undefined ? { maxOutputTokens: maxTokens } : {}),
             ...(tools?.length ? { tools: toGeminiTools(tools) } : {}),
           },
         });

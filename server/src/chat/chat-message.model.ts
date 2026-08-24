@@ -51,9 +51,22 @@ const chatMessageSchema = new Schema(
     /** Set on the assistant message that announces a generated resume. */
     documentUrl: { type: String, default: null },
 
-    /** Files attached to a user message. */
+    /**
+     * Files attached to a user message.
+     *
+     * Name and size are copied here rather than only referenced, so the chat
+     * can show what was attached without loading each file document.
+     */
     attachments: {
-      type: [{ type: Types.ObjectId, ref: "UploadedFile" }],
+      type: [
+        {
+          _id: false,
+          fileId: { type: Types.ObjectId, ref: "UploadedFile", required: true },
+          fileName: { type: String, required: true },
+          mimeType: { type: String, required: true },
+          sizeBytes: { type: Number, required: true },
+        },
+      ],
       default: undefined,
     },
   },

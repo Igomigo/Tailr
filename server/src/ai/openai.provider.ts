@@ -74,18 +74,24 @@ export function createOpenAiProvider(): AiProvider {
     throw new Error("OPENAI_API_KEY is required when AI_PROVIDER is \"openai\"");
   }
 
-  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  const client = new OpenAI({
+    apiKey: env.OPENAI_API_KEY,
+    // Set to point at an OpenAI-compatible provider; unset means OpenAI itself.
+    ...(env.OPENAI_BASE_URL ? { baseURL: env.OPENAI_BASE_URL } : {}),
+  });
 
   return {
     name: "openai",
 
-    async complete({ messages, tools }: AiCompletionRequest): Promise<AiResponse> {
+    async complete({ messages, tools, temperature, maxTokens }: AiCompletionRequest): Promise<AiResponse> {
       let completion: OpenAI.Chat.ChatCompletion;
 
       try {
         completion = await client.chat.completions.create({
           model: env.OPENAI_MODEL,
           messages: toOpenAiMessages(messages),
+          ...(temperature !== undefined ? { temperature } : {}),
+          ...(maxTokens !== undefined ? { max_completion_tokens: maxTokens } : {}),
           ...(tools?.length ? { tools: toOpenAiTools(tools), tool_choice: "auto" } : {}),
         });
       } catch (error) {

@@ -2,6 +2,14 @@
 
 export type MessageRole = "user" | "assistant" | "tool";
 
+/** A file attached to a user message. */
+export interface Attachment {
+  fileId: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
 export interface ChatMessage {
   _id: string;
   chatSessionId: string;
@@ -10,6 +18,7 @@ export interface ChatMessage {
   toolCalls?: { id: string; name: string }[];
   toolCallId?: string | null;
   documentUrl?: string | null;
+  attachments?: Attachment[];
   createdAt: string;
 }
 
@@ -25,6 +34,7 @@ export interface ChatSession {
 /** Events emitted by the streaming message endpoint. */
 export type ChatStreamEvent =
   | { type: "user-message"; message: ChatMessage }
+  | { type: "notice"; text: string }
   | { type: "delta"; text: string }
   | { type: "tool-start"; name: string }
   | { type: "message"; message: ChatMessage }

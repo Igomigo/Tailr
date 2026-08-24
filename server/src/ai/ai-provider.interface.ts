@@ -47,6 +47,17 @@ export interface AiResponse {
 export interface AiCompletionRequest {
   messages: AiMessage[];
   tools?: AiToolDefinition[];
+  /**
+   * Lower values make the reply more deterministic. Left unset for chat, where
+   * some variation is desirable; set to 0 for extraction-style work.
+   */
+  temperature?: number;
+  /**
+   * Ceiling on the reply length. Left unset for chat; set explicitly where a
+   * truncated reply would be worse than a slow one, such as condensing a
+   * resume, since a cut-off summary silently loses jobs.
+   */
+  maxTokens?: number;
 }
 
 /**

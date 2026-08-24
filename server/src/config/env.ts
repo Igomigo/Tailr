@@ -22,6 +22,17 @@ const envSchema = z.object({
   AI_PROVIDER: z.enum(["openai", "gemini"]).default("openai"),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default("gpt-4o"),
+  /**
+   * Overrides the OpenAI endpoint, so the same provider can talk to any
+   * OpenAI-compatible service such as Groq, Together, or a local server.
+   */
+  OPENAI_BASE_URL: z.string().optional(),
+  /**
+   * Model used to condense over-long resumes. Kept separate from the chat
+   * model because condensing needs no tool calling and benefits from whichever
+   * model has the most generous limits.
+   */
+  CONDENSE_MODEL: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default("gemini-flash-latest"),
 
