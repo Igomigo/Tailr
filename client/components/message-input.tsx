@@ -135,9 +135,9 @@ export function MessageInput({
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled}
             className="
-              rounded-full p-2 text-ink-faint
+              rounded-full p-2 text-white
               transition-colors duration-150
-              hover:bg-white/[0.07] hover:text-ink-muted
+              hover:bg-white/[0.07] hover:text-white
               disabled:opacity-40
             "
           >

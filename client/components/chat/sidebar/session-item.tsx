@@ -100,6 +100,7 @@ export function SessionItem({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={transition.base}
+            title={title}
             className="block truncate text-white"
           >
             {title}
