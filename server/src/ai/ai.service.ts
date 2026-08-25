@@ -43,17 +43,18 @@ export interface SessionContext {
  * Ceiling on the whole request, in characters.
  *
  * Providers reject an over-large request outright, so the user gets an error
- * instead of a reply. Budgeting the request here keeps it under the limit of
- * the least generous provider we support (Groq's free tier allows 8,000 tokens
- * per minute, and roughly four characters make a token).
+ * instead of a reply. This is a backstop against a pathological upload, not a
+ * routine budget: a long resume and a long job description together come to a
+ * small fraction of it, so nothing a real user sends should ever be trimmed.
+ *
+ * Sized against the smallest context window we target — 400,000 tokens, at
+ * roughly four characters per token — with a wide margin left for the reply,
+ * the tool schemas, and the fact that the ratio is only an approximation.
  */
-const MAX_REQUEST_CHARS = 26_000;
+const MAX_REQUEST_CHARS = 600_000;
 
 /** Room reserved for the model's own reply within that ceiling. */
-const RESPONSE_HEADROOM_CHARS = 4_000;
-
-/** Never trim the resume below this: less than a page is not worth sending. */
-const MIN_RESUME_CHARS = 2_500;
+const RESPONSE_HEADROOM_CHARS = 24_000;
 
 /**
  * Reports whether pinned text already appears in the replayed history.
@@ -74,7 +75,9 @@ function alreadyInHistory(history: AiMessage[], text: string): boolean {
  */
 function trimTo(text: string, budget: number): string {
   if (text.length <= budget) return text;
-  const clipped = text.slice(0, budget);
+  // A negative budget would make slice() count back from the end and keep most
+  // of the text, the opposite of trimming.
+  const clipped = text.slice(0, Math.max(0, budget));
   const lastBreak = clipped.lastIndexOf("\n");
   const body = lastBreak > budget * 0.8 ? clipped.slice(0, lastBreak) : clipped;
   return `${body}\n\n[Truncated. Ask the user about anything missing rather than assuming.]`;
@@ -149,24 +152,20 @@ export function buildMessages(history: AiMessage[], context: SessionContext = {}
     trimmedHistory.unshift(entry);
   }
 
+  // Pinned in full. The ceiling is only reachable by a pathological upload, so
+  // splitting the remaining budget between these two would add branching that
+  // never runs for a real user; trimTo is left as the last line of defence.
   const pinned: string[] = [];
 
-  if (context.jobDescription && !alreadyInHistory(history, context.jobDescription)) {
-    const heading = "## Target job description\n\n";
-    const share = Math.max(0, Math.min(context.jobDescription.length, budget - MIN_RESUME_CHARS));
-    if (share > 0) {
-      const text = trimTo(context.jobDescription, share);
-      pinned.push(heading + text);
-      budget -= heading.length + text.length;
-    }
-  }
+  for (const [heading, text] of [
+    ["## Target job description", context.jobDescription],
+    ["## Text extracted from the user's uploaded resume", context.resumeContext],
+  ] as const) {
+    if (!text || alreadyInHistory(history, text)) continue;
 
-  if (context.resumeContext && !alreadyInHistory(history, context.resumeContext)) {
-    const heading = "## Text extracted from the user's uploaded resume\n\n";
-    const share = budget - heading.length;
-    if (share > 0) {
-      pinned.push(heading + trimTo(context.resumeContext, share));
-    }
+    const block = `${heading}\n\n${trimTo(text, budget)}`;
+    pinned.push(block);
+    budget -= block.length;
   }
 
   if (pinned.length) {

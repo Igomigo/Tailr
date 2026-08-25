@@ -15,11 +15,17 @@ import {
   combineParsedText,
   type IncomingFile,
 } from "../files/uploaded-file.service.js";
-import { condenseResume } from "../ai/resume-condense.service.js";
 import { UploadedFileModel } from "../files/uploaded-file.model.js";
 
-/** How many recent messages are replayed as AI context. */
-const HISTORY_LIMIT = 20;
+/**
+ * How many recent messages are replayed as AI context.
+ *
+ * Tailoring a resume is an iterative conversation, so the limit is set to keep
+ * a whole session in view rather than to ration tokens: even a full window of
+ * messages alongside the resume and job description uses a small fraction of
+ * the model's context.
+ */
+const HISTORY_LIMIT = 100;
 
 /** Characters of the first user message used to auto-title an untitled chat. */
 const TITLE_LENGTH = 60;
@@ -136,25 +142,24 @@ export async function getRecentMessages(
 }
 
 /**
- * Stores uploaded resume text on the session, condensing it when too long.
+ * Stores uploaded resume text on the session.
+ *
+ * The text is kept whole. Summarising it first would be lossy for no gain: a
+ * long resume is a small share of the model's context, and the details a
+ * summary drops — a specific metric, an early role — are exactly the ones a
+ * tailored resume needs.
  *
  * @param session - Session to update.
  * @param uploadedFiles - Files attached to this message.
- * @returns A note to show the user when the resume had to be shortened.
  */
-async function applyResumeContext(
+function applyResumeContext(
   session: ChatSessionDocument,
   uploadedFiles: Awaited<ReturnType<typeof processUploadedFiles>>,
-): Promise<string | null> {
+): void {
   const parsedText = combineParsedText(uploadedFiles);
-  if (!parsedText) return null;
+  if (!parsedText) return;
 
-  const { text, wasCondensed } = await condenseResume(parsedText);
-  session.resumeContext = text;
-
-  return wasCondensed
-    ? "Your resume was long, so I summarised it to fit. I kept every role, date, and qualification, but if a specific detail matters, paste it into the chat."
-    : null;
+  session.resumeContext = parsedText;
 }
 
 /** Derives a readable session title from the first user message. */
@@ -241,9 +246,8 @@ export async function handleUserMessage(
   }
 
   // Pinned to the session so the resume stays available on every later turn,
-  // even once this message falls outside the recent-history window. This
-  // endpoint has no channel for the condensing notice; the streaming one does.
-  await applyResumeContext(session, uploadedFiles);
+  // even once this message falls outside the recent-history window.
+  applyResumeContext(session, uploadedFiles);
 
   session.lastMessageAt = new Date();
   await session.save();
@@ -393,14 +397,12 @@ export async function* streamUserMessage(
     if (message.length >= JOB_DESCRIPTION_MIN_LENGTH) session.jobDescription = message;
   }
 
-  const condenseNotice = await applyResumeContext(session, uploadedFiles);
+  applyResumeContext(session, uploadedFiles);
 
   session.lastMessageAt = new Date();
   await session.save();
 
   yield { type: "user-message", message: userMessage };
-
-  if (condenseNotice) yield { type: "notice", text: condenseNotice };
 
   const context = {
     jobDescription: session.jobDescription,

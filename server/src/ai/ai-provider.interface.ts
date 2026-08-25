@@ -50,6 +50,10 @@ export interface AiCompletionRequest {
   /**
    * Lower values make the reply more deterministic. Left unset for chat, where
    * some variation is desirable; set to 0 for extraction-style work.
+   *
+   * Not universally supported: OpenAI's reasoning models, including the GPT-5
+   * family, reject the parameter outright, so a provider must omit it rather
+   * than substitute a default.
    */
   temperature?: number;
   /**
