@@ -11,6 +11,8 @@ interface UseChatOptions {
   chatId?: string;
   /** Called once a session is created, so the route can update its URL. */
   onSessionCreated?: (chatId: string) => void;
+  /** Called when the assistant names the conversation, on its first turn. */
+  onTitle?: (chatId: string, title: string) => void;
 }
 
 /**
@@ -20,7 +22,11 @@ interface UseChatOptions {
  * meant for the model, not the user. The document URL they produce surfaces on
  * the assistant message that follows.
  */
-export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
+export function useChat({
+  chatId,
+  onSessionCreated,
+  onTitle,
+}: UseChatOptions = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingText, setStreamingText] = useState("");
   const [status, setStatus] = useState<ChatStatus>("idle");
@@ -160,6 +166,10 @@ export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
               }
               break;
 
+            case "title":
+              if (id) onTitle?.(id, event.title);
+              break;
+
             case "error":
               setError(event.error);
               setMessages((current) =>
@@ -192,7 +202,7 @@ export function useChat({ chatId, onSessionCreated }: UseChatOptions = {}) {
         if (created && id) onSessionCreated?.(id);
       }
     },
-    [onSessionCreated],
+    [onSessionCreated, onTitle],
   );
 
   /** Stops an in-flight response. */

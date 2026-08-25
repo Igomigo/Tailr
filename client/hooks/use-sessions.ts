@@ -33,6 +33,20 @@ export function useSessions() {
   }, []);
 
   /**
+   * Applies a title the assistant generated.
+   *
+   * Local only: the server saved it as part of the turn that produced it, so
+   * writing it back would be a redundant round trip.
+   */
+  const setTitle = useCallback((chatId: string, title: string): void => {
+    setSessions((current) =>
+      current.map((session) =>
+        session._id === chatId ? { ...session, title } : session,
+      ),
+    );
+  }, []);
+
+  /**
    * Renames a session, updating the list before the request completes.
    *
    * The new title is already on screen in the input the user just typed into,
@@ -79,5 +93,5 @@ export function useSessions() {
     void refresh();
   }, [refresh]);
 
-  return { sessions, loading, error, refresh, rename, remove };
+  return { sessions, loading, error, refresh, rename, remove, setTitle };
 }

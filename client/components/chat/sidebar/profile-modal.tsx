@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import type { AuthUser } from "@/lib/api";
@@ -6,7 +9,8 @@ interface ProfileModalProps {
   user: AuthUser;
   open: boolean;
   onClose: () => void;
-  onLogout: () => void;
+  /** Awaited, so the confirm button can show progress until it resolves. */
+  onLogout: () => void | Promise<void>;
 }
 
 /** Reads a date as "August 2026", which is enough detail for an account page. */
@@ -24,6 +28,59 @@ export function ProfileModal({
   onClose,
   onLogout,
 }: ProfileModalProps) {
+  const [confirming, setConfirming] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  // Reopening the dialog should always land on the account view, never on a
+  // confirmation the user left behind when they last closed it.
+  useEffect(() => {
+    if (!open) {
+      setConfirming(false);
+      setSigningOut(false);
+    }
+  }, [open]);
+
+  const handleConfirm = async (): Promise<void> => {
+    setSigningOut(true);
+    try {
+      await onLogout();
+    } finally {
+      // The component usually unmounts with the redirect that follows; this
+      // matters when sign-out fails and the dialog stays on screen.
+      setSigningOut(false);
+    }
+  };
+
+  if (confirming) {
+    return (
+      <Modal
+        open={open}
+        onClose={onClose}
+        title="Sign out?"
+        description="You will need to sign in again to reach your conversations."
+        size="sm"
+      >
+        <div className="mt-6 flex gap-3">
+          <Button
+            variant="ghost"
+            onClick={() => setConfirming(false)}
+            disabled={signingOut}
+            className="flex-1"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            loading={signingOut}
+            className="flex-1"
+          >
+            Sign out
+          </Button>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
     <Modal open={open} onClose={onClose} title="Your account" size="sm">
       <div className="flex items-center gap-3.5">
@@ -49,7 +106,11 @@ export function ProfileModal({
         </div>
       </dl>
 
-      <Button variant="ghost" onClick={onLogout} className="mt-7 w-full">
+      <Button
+        variant="ghost"
+        onClick={() => setConfirming(true)}
+        className="mt-7 w-full"
+      >
         Sign out
       </Button>
     </Modal>

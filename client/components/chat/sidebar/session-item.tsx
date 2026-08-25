@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Menu, MenuItem } from "@/components/ui/menu";
+import { transition } from "@/lib/motion";
 
 interface SessionItemProps {
   id: string;
@@ -77,14 +79,32 @@ export function SessionItem({
         href={`/chat/${id}`}
         data-active={active}
         className="
-          block truncate rounded-[var(--radius-sm)] py-2 pl-3 pr-9
+          block truncate rounded-[var(--radius-sm)] py-2 pl-3 pr-11
+          [@media(hover:hover)]:pr-9
           text-small text-ink-muted
           transition-colors duration-150
           hover:bg-white/[0.05] hover:text-ink
           data-[active=true]:bg-white/[0.07] data-[active=true]:text-ink
         "
       >
-        {title}
+        {/*
+          Keyed on the title so a rename swaps the element, letting the old and
+          new text cross-fade. The assistant renames a conversation after its
+          first reply, and text changing abruptly at the edge of vision pulls
+          attention away from the reply the user is reading.
+        */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={title}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={transition.base}
+            className="block truncate text-white"
+          >
+            {title}
+          </motion.span>
+        </AnimatePresence>
       </Link>
 
       <button
@@ -96,13 +116,15 @@ export function SessionItem({
         }}
         data-open={menuOpen}
         className="
-          absolute right-1 top-1/2 -translate-y-1/2 rounded-[6px] p-1.5
-          text-ink-faint opacity-0
+          absolute right-1 top-1/2 -translate-y-1/2 rounded-[6px] p-2.5
+          text-ink-faint
           transition-[opacity,color,background-color] duration-150
           hover:bg-white/10 hover:text-ink
           focus-visible:opacity-100
-          group-hover/item:opacity-100
           data-[open=true]:opacity-100
+          [@media(hover:hover)]:p-1.5
+          [@media(hover:hover)]:opacity-0
+          [@media(hover:hover)]:group-hover/item:opacity-100
         "
       >
         <MoreHorizontal size={15} strokeWidth={2} />

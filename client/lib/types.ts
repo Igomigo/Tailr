@@ -38,5 +38,6 @@ export type ChatStreamEvent =
   | { type: "delta"; text: string }
   | { type: "tool-start"; name: string }
   | { type: "message"; message: ChatMessage }
+  | { type: "title"; title: string }
   | { type: "error"; error: string }
   | { type: "end" };

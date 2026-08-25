@@ -61,10 +61,9 @@ export default function LandingPage() {
           variants={rise}
           className="mx-auto mt-5 max-w-lg text-center text-ink-muted"
         >
-          Paste a job description and upload your current resume, or start from
-          scratch. Shape it through natural conversation, then download a resume that is
-          ready to send.
+          Land your next job faster: just drop in a job description and your resume (or start fresh). Chat your way to a job-winning, ATS-friendly resume you can download in minutes.
         </motion.p>
+   
 
         <motion.div variants={rise} className="mt-9 flex justify-center">
           <Link

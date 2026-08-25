@@ -35,6 +35,7 @@ export function ChatView({ chatId }: { chatId?: string }) {
     refresh,
     rename,
     remove,
+    setTitle,
   } = useSessions();
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
@@ -55,6 +56,7 @@ export function ChatView({ chatId }: { chatId?: string }) {
       router.replace(`/chat/${id}`);
       void refresh();
     },
+    onTitle: setTitle,
   });
 
   const started = messages.length > 0;

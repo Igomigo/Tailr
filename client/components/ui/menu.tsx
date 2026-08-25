@@ -23,22 +23,25 @@ export function Menu({ open, onClose, children, align = "right" }: MenuProps) {
   useEffect(() => {
     if (!open) return;
 
-    const onPointerDown = (event: MouseEvent): void => {
-      if (!panelRef.current?.contains(event.target as Node)) onClose();
+    // Scoped to the whole anchor, which holds the trigger as well as the panel,
+    // so a press on the trigger is not treated as a press outside. That leaves
+    // the trigger free to toggle its own state without this handler racing it.
+    const anchor = panelRef.current?.parentElement;
+
+    const onPointerDown = (event: PointerEvent): void => {
+      if (!anchor?.contains(event.target as Node)) onClose();
     };
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") onClose();
     };
 
-    // Deferred so the click that opened the menu does not immediately close it.
-    const timer = window.setTimeout(() => {
-      document.addEventListener("mousedown", onPointerDown);
-    }, 0);
+    // pointerdown covers mouse, touch, and pen alike; mousedown is synthesised
+    // late on touch, after the tap that opened the menu had already run.
+    document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
 
     return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open, onClose]);

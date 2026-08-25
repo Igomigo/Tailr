@@ -16,6 +16,7 @@ import {
   type IncomingFile,
 } from "../files/uploaded-file.service.js";
 import { UploadedFileModel } from "../files/uploaded-file.model.js";
+import { generateChatTitle } from "../ai/chat-title.service.js";
 
 /**
  * How many recent messages are replayed as AI context.
@@ -346,7 +347,33 @@ export type ChatStreamEvent =
   | { type: "delta"; text: string }
   | { type: "tool-start"; name: string }
   | { type: "message"; message: ChatMessageDocument }
+  | { type: "title"; title: string }
   | { type: "error"; error: string };
+
+/**
+ * Names the session from its opening exchange, once.
+ *
+ * Runs only on the first turn, after the reply has been streamed, so the user
+ * never waits on it. Yields nothing when the model declines or fails, leaving
+ * the title derived from the user's own message in place.
+ *
+ * @param session - Session to name; saved only when a title is produced.
+ * @param userMessage - The user's opening message.
+ * @param assistantReply - The reply just streamed back.
+ */
+async function* titleFromFirstExchange(
+  session: ChatSessionDocument,
+  userMessage: string,
+  assistantReply: string,
+): AsyncGenerator<ChatStreamEvent> {
+  const title = await generateChatTitle(userMessage, assistantReply);
+  if (!title || title === session.title) return;
+
+  session.title = title;
+  await session.save();
+
+  yield { type: "title", title };
+}
 
 /**
  * Handles a user message, streaming the assistant's reply as it is generated.
@@ -433,6 +460,10 @@ export async function* streamUserMessage(
         content: reply.content,
       }),
     };
+
+    if (messageCount === 1) {
+      yield* titleFromFirstExchange(session, message, reply.content ?? "");
+    }
     return;
   }
 
@@ -481,15 +512,21 @@ export async function* streamUserMessage(
     }
   }
 
+  const finalContent = finalReply.content ?? "Your resume is ready.";
+
   yield {
     type: "message",
     message: await ChatMessageModel.create({
       chatSessionId: session._id,
       role: "assistant",
-      content: finalReply.content ?? "Your resume is ready.",
+      content: finalContent,
       documentUrl,
     }),
   };
+
+  if (messageCount === 1) {
+    yield* titleFromFirstExchange(session, message, finalContent);
+  }
 }
 
 /**
