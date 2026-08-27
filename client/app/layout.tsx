@@ -10,9 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Tailr — the AI resume builder you talk to",
+  title: "Tailr - the AI resume builder you talk to",
   description:
-    "Paste a job description, refine your resume through conversation, and generate a polished, ATS-ready PDF.",
+    "Paste a job description, chat with AI to refine your resume, and generate a polished, ATS-ready PDF.",
 };
 
 export const viewport: Viewport = {
