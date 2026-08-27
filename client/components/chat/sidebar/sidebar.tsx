@@ -32,12 +32,14 @@ function SessionList({
   error,
   onRename,
   onDelete,
+  onNavigate,
 }: {
   sessions: ChatSession[];
   activeId?: string;
   error?: string | null;
   onRename: (chatId: string, title: string) => Promise<void>;
   onDelete: (chatId: string) => void;
+  onNavigate?: () => void;
 }) {
   if (error) {
     return (
@@ -67,6 +69,7 @@ function SessionList({
             active={session._id === activeId}
             onRename={onRename}
             onDelete={onDelete}
+            onNavigate={onNavigate}
           />
         ))}
       </ul>
@@ -111,13 +114,14 @@ function SidebarContent({
         New resume
       </Link>
 
-      <nav className="mt-1 flex-1 overflow-y-auto" onClick={onNavigate}>
+      <nav className="mt-1 flex-1 overflow-y-auto">
         <SessionList
           sessions={sessions}
           activeId={activeId}
           error={error}
           onRename={onRename}
           onDelete={onDelete}
+          onNavigate={onNavigate}
         />
       </nav>
 

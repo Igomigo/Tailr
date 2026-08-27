@@ -33,7 +33,7 @@ export function EmptyState({
         variants={rise}
         className="text-center text-[2rem] font-medium leading-tight tracking-[-0.02em] text-ink sm:text-display"
       >
-        What role are you going for?
+        Let’s tailor your resume.
       </motion.h1>
 
       <motion.p

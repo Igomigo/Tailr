@@ -13,6 +13,12 @@ interface SessionItemProps {
   active: boolean;
   onRename: (id: string, title: string) => Promise<void>;
   onDelete: (id: string) => void;
+  /**
+   * Called when the conversation itself is opened, so the mobile drawer can
+   * close behind it. Deliberately not on a wrapper: a handler covering the
+   * whole row would also fire for the options button inside it.
+   */
+  onNavigate?: () => void;
 }
 
 /**
@@ -28,6 +34,7 @@ export function SessionItem({
   active,
   onRename,
   onDelete,
+  onNavigate,
 }: SessionItemProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -77,6 +84,7 @@ export function SessionItem({
     <li className="group/item relative">
       <Link
         href={`/chat/${id}`}
+        onClick={onNavigate}
         data-active={active}
         className="
           block truncate rounded-[var(--radius-sm)] py-2 pl-3 pr-11
