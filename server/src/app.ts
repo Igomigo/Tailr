@@ -1,6 +1,5 @@
 import express, { type Express } from "express";
 import cors from "cors";
-import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import { errorHandler, notFoundHandler } from "./shared/error-middleware.js";
 import { chatRouter } from "./chat/chat.routes.js";
@@ -19,10 +18,10 @@ export function createApp(): Express {
   const app = express();
 
   // The client is served from a different origin in every environment, so
-  // browser requests need an explicit allow-list.
-  app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
+  // browser requests need an explicit allow-list. The session travels in an
+  // Authorization header rather than a cookie, so no credentials are involved.
+  app.use(cors({ origin: env.CLIENT_URL }));
 
-  app.use(cookieParser());
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true }));
 

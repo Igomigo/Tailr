@@ -25,9 +25,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 /**
  * Holds the signed-in user for the app.
  *
- * The session itself is an httpOnly cookie the browser sends automatically;
- * this only mirrors who that cookie belongs to, so the UI can render a name
- * and know whether to redirect.
+ * The session itself is a token held by the API layer, which attaches it to
+ * every request; this only mirrors who that token belongs to, so the UI can
+ * render a name and know whether to redirect.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
