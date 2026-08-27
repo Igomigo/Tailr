@@ -44,7 +44,11 @@ export function EmptyState({
       </motion.p>
 
       <motion.div variants={rise} className="mt-8">
-        <MessageInput autoFocus onSubmit={onSubmit} />
+        <MessageInput
+          autoFocus
+          onSubmit={onSubmit}
+          narrowPlaceholder="Paste a job description…"
+        />
         {error && (
           <div className="mt-3">
             <ErrorNotice message={error} onRetry={onRetry} />

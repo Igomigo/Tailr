@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { motion } from "motion/react";
 import { ArrowUp, Paperclip, X } from "lucide-react";
 import { transition } from "@/lib/motion";
@@ -12,6 +12,12 @@ const MAX_FILES = 3;
 
 interface MessageInputProps {
   placeholder?: string;
+  /**
+   * Used on phone-width screens, where a long hint wraps to a second line the
+   * collapsed input cannot show. Defaults to `placeholder`, so only a hint
+   * that is actually too long needs a shorter form.
+   */
+  narrowPlaceholder?: string;
   autoFocus?: boolean;
   disabled?: boolean;
   onSubmit: (message: string, files: File[]) => void;
@@ -26,6 +32,7 @@ interface MessageInputProps {
  */
 export function MessageInput({
   placeholder = "Paste a job description, or describe the role you want…",
+  narrowPlaceholder,
   autoFocus = false,
   disabled = false,
   onSubmit,
@@ -33,6 +40,19 @@ export function MessageInput({
   const [value, setValue] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // A long hint wraps to a second line on a phone, which the collapsed input
+  // cannot show. Starts false so the server and first client render agree.
+  const [narrow, setNarrow] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 639px)");
+    const sync = (): void => setNarrow(query.matches);
+
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
 
   const canSubmit = !disabled && (value.trim().length > 0 || files.length > 0);
 
@@ -100,7 +120,7 @@ export function MessageInput({
           rows={1}
           autoFocus={autoFocus}
           disabled={disabled}
-          placeholder={placeholder}
+          placeholder={narrow ? (narrowPlaceholder ?? placeholder) : placeholder}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={handleKeyDown}
           className="
