@@ -20,5 +20,10 @@ AGENTS.md
 CLAUDE.md
 .claude/
 
+# Brand working files. The images the app actually serves live in client/app/,
+# where Next resolves them by filename; everything here is either a source
+# export or a duplicate of those, kept locally rather than served from public/.
+client/public/brand/
+
 # OS
 .DS_Store

@@ -9,10 +9,40 @@ const inter = Inter({
   display: "swap",
 });
 
+const TITLE = "Tailr - the AI resume builder you talk to";
+
+const DESCRIPTION =
+  "Paste a job description, chat with AI to refine your resume, and generate a polished, ATS-ready PDF.";
+
+/**
+ * Absolute base for social images.
+ *
+ * Facebook, LinkedIn, and X fetch preview images from their own servers, so a
+ * relative path cannot be resolved. Without this, Next falls back to localhost
+ * and every shared link renders without an image.
+ */
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tailr.igomigofatai.com";
+
 export const metadata: Metadata = {
-  title: "Tailr - the AI resume builder you talk to",
-  description:
-    "Paste a job description, chat with AI to refine your resume, and generate a polished, ATS-ready PDF.",
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  // The icons and the share image are picked up from app/icon.png,
+  // app/apple-icon.png, and app/opengraph-image.png by filename, so declaring
+  // them here as well would emit a second, unhashed tag pointing at a path
+  // that does not exist.
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "Tailr",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {
