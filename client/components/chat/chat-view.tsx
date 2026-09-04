@@ -32,7 +32,7 @@ export function ChatView({ chatId }: { chatId?: string }) {
   const {
     sessions,
     error: sessionsError,
-    refresh,
+    addSession,
     rename,
     remove,
     setTitle,
@@ -50,11 +50,14 @@ export function ChatView({ chatId }: { chatId?: string }) {
     retry,
   } = useChat({
     chatId,
-    onSessionCreated: (id) => {
+    // Added straight to the cached list rather than refetching it: the server
+    // would return the same sessions plus this one, and replacing the list
+    // re-renders every row that did not change.
+    onSessionCreated: addSession,
+    onSessionReady: (chatId) => {
       // Replace rather than push, so Back returns to where the user came from
       // instead of an empty conversation they already left.
-      router.replace(`/chat/${id}`);
-      void refresh();
+      router.replace(`/chat/${chatId}`);
     },
     onTitle: setTitle,
   });

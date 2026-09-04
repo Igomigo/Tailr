@@ -1,16 +1,29 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import * as api from "@/lib/api";
-import type { ChatMessage } from "@/lib/types";
+import { queryKeys } from "@/lib/query-keys";
+import type { ChatMessage, ChatSession } from "@/lib/types";
 
 /** What the assistant is currently doing, used to pick the right indicator. */
 export type ChatStatus = "idle" | "thinking" | "streaming" | "generating";
 
 interface UseChatOptions {
   chatId?: string;
-  /** Called once a session is created, so the route can update its URL. */
-  onSessionCreated?: (chatId: string) => void;
+  /**
+   * Called the moment a session exists, so the sidebar can show it while the
+   * first reply is still streaming. Passes the whole session, not just its id,
+   * so the list can be extended without refetching it.
+   */
+  onSessionCreated?: (session: ChatSession) => void;
+  /**
+   * Called once the turn is over, to move the route to the new conversation.
+   *
+   * Kept separate from `onSessionCreated` because navigating remounts this
+   * hook, which would cut off a stream still in progress.
+   */
+  onSessionReady?: (chatId: string) => void;
   /** Called when the assistant names the conversation, on its first turn. */
   onTitle?: (chatId: string, title: string) => void;
 }
@@ -25,6 +38,7 @@ interface UseChatOptions {
 export function useChat({
   chatId,
   onSessionCreated,
+  onSessionReady,
   onTitle,
 }: UseChatOptions = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -32,7 +46,6 @@ export function useChat({
   const [status, setStatus] = useState<ChatStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [loading, setLoading] = useState(Boolean(chatId));
 
   const sessionIdRef = useRef<string | undefined>(chatId);
   const abortRef = useRef<AbortController | null>(null);
@@ -43,38 +56,32 @@ export function useChat({
     sessionIdRef.current = chatId;
   }, [chatId]);
 
-  // Load history when opening an existing conversation.
+  // Loads an existing conversation. Disabled for a new chat, which has no id
+  // and therefore no history to fetch.
+  const {
+    data: history,
+    isPending,
+    error: historyError,
+  } = useQuery({
+    queryKey: queryKeys.session(chatId ?? ""),
+    queryFn: () => api.getSession(chatId!),
+    enabled: Boolean(chatId),
+  });
+
+  // The streamed turn is owned here rather than in the cache, so opening a
+  // conversation seeds the local list from whatever the query returned.
   useEffect(() => {
     if (!chatId) {
       setMessages([]);
-      setLoading(false);
       return;
     }
 
-    let cancelled = false;
-    setLoading(true);
+    if (history) {
+      setMessages(history.messages.filter((message) => message.role !== "tool"));
+    }
+  }, [chatId, history]);
 
-    api
-      .getSession(chatId)
-      .then(({ messages: history }) => {
-        if (cancelled) return;
-        setMessages(history.filter((message) => message.role !== "tool"));
-      })
-      .catch((cause: unknown) => {
-        if (!cancelled) {
-          setError(
-            cause instanceof Error ? cause.message : "Could not load this chat",
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [chatId]);
+  const loading = Boolean(chatId) && isPending;
 
   const send = useCallback(
     async (text: string, files: File[] = []): Promise<void> => {
@@ -108,17 +115,18 @@ export function useChat({
       // Declared outside the try so the finally block can announce a newly
       // created session after the stream has finished.
       let id = sessionIdRef.current;
-      let created = false;
+      let createdId: string | null = null;
 
       try {
         if (!id) {
           const session = await api.createSession();
           id = session._id;
           sessionIdRef.current = id;
-          // Deliberately not announced yet: telling the route now would send
-          // it to /chat/:id, remounting this hook and cutting off the stream
-          // below before a single token arrives.
-          created = true;
+          // Shown in the sidebar straight away, so a title generated during
+          // this stream has a row to land on. Navigation waits until the
+          // stream is done, since it would remount this hook and cut it off.
+          createdId = id;
+          onSessionCreated?.(session);
         }
 
         let streamed = "";
@@ -131,10 +139,15 @@ export function useChat({
         )) {
           switch (event.type) {
             case "user-message":
-              // Replace the optimistic message with the persisted one.
+              // Take the server's fields but keep the id already on screen.
+              // React lists are keyed by id, so swapping it would unmount the
+              // message and mount a new one, making it blink out and back for
+              // a message that never actually changed.
               setMessages((current) =>
                 current.map((message) =>
-                  message._id === optimistic._id ? event.message : message,
+                  message._id === optimistic._id
+                    ? { ...event.message, _id: optimistic._id }
+                    : message,
                 ),
               );
               break;
@@ -143,14 +156,6 @@ export function useChat({
               streamed += event.text;
               setStreamingText(streamed);
               setStatus("streaming");
-              break;
-
-            case "notice":
-              setNotice(event.text);
-              break;
-
-            case "tool-start":
-              setStatus("generating");
               break;
 
             case "message":
@@ -164,6 +169,14 @@ export function useChat({
                 setStreamingText("");
                 setMessages((current) => [...current, event.message]);
               }
+              break;
+
+            case "notice":
+              setNotice(event.text);
+              break;
+
+            case "tool-start":
+              setStatus("generating");
               break;
 
             case "title":
@@ -199,10 +212,10 @@ export function useChat({
 
         // Announced only once the turn is over. The route change this triggers
         // remounts the hook, which would abort a stream still in progress.
-        if (created && id) onSessionCreated?.(id);
+        if (createdId) onSessionReady?.(createdId);
       }
     },
-    [onSessionCreated, onTitle],
+    [onSessionCreated, onSessionReady, onTitle],
   );
 
   /** Stops an in-flight response. */
@@ -220,7 +233,8 @@ export function useChat({
     messages,
     streamingText,
     status,
-    error,
+    // A failed turn takes precedence: it is the thing the user just tried.
+    error: error ?? (historyError ? "Could not load this chat" : null),
     notice,
     loading,
     send,
