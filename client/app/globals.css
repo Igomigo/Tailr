@@ -143,6 +143,30 @@ select:focus-visible {
   background-clip: content-box;
 }
 
+/* Placeholder shimmer. A highlight sweeps across the bar rather than the whole
+   bar pulsing: a pulse blinks at the edge of vision, while a sweep reads as
+   something arriving. Paired with .skeleton in Skeleton. */
+@keyframes skeleton-sweep {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  background-color: var(--color-line);
+  background-image: linear-gradient(
+    90deg,
+    transparent 20%,
+    var(--color-line) 50%,
+    transparent 80%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.8s var(--ease-in-out-soft) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -31,6 +31,7 @@ export function ChatView({ chatId }: { chatId?: string }) {
   const { collapsed, toggle } = useSidebar();
   const {
     sessions,
+    loading: sessionsLoading,
     error: sessionsError,
     addSession,
     rename,
@@ -77,6 +78,7 @@ export function ChatView({ chatId }: { chatId?: string }) {
       <Sidebar
         sessions={sessions}
         activeId={chatId}
+        loading={sessionsLoading}
         error={sessionsError}
         onRename={rename}
         onDelete={setPendingDelete}

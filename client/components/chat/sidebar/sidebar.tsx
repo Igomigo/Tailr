@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { PenSquare, X } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { SessionItem } from "./session-item";
+import { SessionListSkeleton } from "./session-list-skeleton";
 import { ProfileButton } from "./profile-button";
 import { transition } from "@/lib/motion";
 import type { ChatSession } from "@/lib/types";
@@ -12,6 +13,8 @@ import type { ChatSession } from "@/lib/types";
 interface SidebarProps {
   sessions: ChatSession[];
   activeId?: string;
+  /** Shows placeholder rows in place of the list while it is being fetched. */
+  loading?: boolean;
   /** Shown in place of the list when sessions could not be loaded. */
   error?: string | null;
   onRename: (chatId: string, title: string) => Promise<void>;
@@ -25,27 +28,32 @@ interface SidebarProps {
 
 const RAIL_WIDTH_PX = 256;
 
+/** What both the desktop rail and the mobile drawer render inside them. */
+type ContentProps = Omit<SidebarProps, "collapsed" | "open" | "onClose"> & {
+  /** Closes the mobile drawer once a conversation has been opened. */
+  onNavigate?: () => void;
+};
+
 /** Groups conversations under a heading once there are any. */
 function SessionList({
   sessions,
   activeId,
+  loading,
   error,
   onRename,
   onDelete,
   onNavigate,
-}: {
-  sessions: ChatSession[];
-  activeId?: string;
-  error?: string | null;
-  onRename: (chatId: string, title: string) => Promise<void>;
-  onDelete: (chatId: string) => void;
-  onNavigate?: () => void;
-}) {
+}: ContentProps) {
   if (error) {
     return (
       <p className="px-3 py-2 text-micro text-[var(--color-danger)]">{error}</p>
     );
   }
+
+  // Checked before the empty case: an empty list and an unfetched one look the
+  // same from here, and showing "no conversations" to someone who has them is
+  // worse than showing nothing at all.
+  if (loading) return <SessionListSkeleton />;
 
   if (!sessions.length) {
     return (
@@ -78,21 +86,7 @@ function SessionList({
 }
 
 /** Shared inner content, rendered in both the desktop rail and mobile drawer. */
-function SidebarContent({
-  sessions,
-  activeId,
-  error,
-  onRename,
-  onDelete,
-  onNavigate,
-}: {
-  sessions: ChatSession[];
-  activeId?: string;
-  error?: string | null;
-  onRename: (chatId: string, title: string) => Promise<void>;
-  onDelete: (chatId: string) => void;
-  onNavigate?: () => void;
-}) {
+function SidebarContent({ onNavigate, ...list }: ContentProps) {
   return (
     <div className="flex h-full flex-col px-3 py-4">
       <div className="px-2 pb-4">
@@ -115,14 +109,7 @@ function SidebarContent({
       </Link>
 
       <nav className="mt-1 flex-1 overflow-y-auto">
-        <SessionList
-          sessions={sessions}
-          activeId={activeId}
-          error={error}
-          onRename={onRename}
-          onDelete={onDelete}
-          onNavigate={onNavigate}
-        />
+        <SessionList {...list} onNavigate={onNavigate} />
       </nav>
 
       <div className="border-t border-[var(--color-line)] pt-2">
@@ -139,14 +126,10 @@ function SidebarContent({
  * the screen cannot afford a permanent column.
  */
 export function Sidebar({
-  sessions,
-  activeId,
-  error,
   collapsed,
   open,
   onClose,
-  onRename,
-  onDelete,
+  ...content
 }: SidebarProps) {
   return (
     <>
@@ -162,13 +145,7 @@ export function Sidebar({
         }}
       >
         <div style={{ width: RAIL_WIDTH_PX }} className="h-full">
-          <SidebarContent
-            sessions={sessions}
-            activeId={activeId}
-            error={error}
-            onRename={onRename}
-            onDelete={onDelete}
-          />
+          <SidebarContent {...content} />
         </div>
       </motion.aside>
 
@@ -198,14 +175,7 @@ export function Sidebar({
               >
                 <X size={17} strokeWidth={1.75} />
               </button>
-              <SidebarContent
-                sessions={sessions}
-                activeId={activeId}
-                error={error}
-                onRename={onRename}
-                onDelete={onDelete}
-                onNavigate={onClose}
-              />
+              <SidebarContent {...content} onNavigate={onClose} />
             </motion.aside>
           </>
         )}
