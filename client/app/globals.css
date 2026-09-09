@@ -168,6 +168,61 @@ select:focus-visible {
 }
 
 /*
+ * Sidebar title that reveals itself on hover.
+ *
+ * A long conversation title is clipped to the width of the rail. Hovering
+ * slides it far enough left to read the rest, then returns it. The distance is
+ * the element's own overflow, passed in as --scroll-distance, and the duration
+ * scales with it, so a title one word too long does not crawl while a very
+ * long one races.
+ *
+ * Held still for a moment at each end: starting the instant the pointer
+ * arrives makes a row twitch as the cursor passes over it on the way
+ * somewhere else.
+ */
+@keyframes title-reveal {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-1 * var(--scroll-distance, 0px)));
+  }
+}
+
+/*
+ * Only the travel is in the keyframes, with the pause before it expressed as
+ * a delay. Holding the ends inside the keyframes instead would make both the
+ * pause and the speed fractions of one duration, so a longer title would rest
+ * longer and move faster; here each stays fixed and only the travel grows.
+ */
+.title-scroll {
+  animation: title-reveal var(--scroll-duration, 4s) var(--ease-in-out-soft)
+    var(--scroll-delay, 0.5s) infinite alternate;
+}
+
+/*
+ * Dissolves the last few pixels of a title into the row.
+ *
+ * The options button floats above the text rather than reserving space beside
+ * it, so the title runs the full width of the row and would otherwise slide
+ * visibly underneath the button. Fading it out first means the two never
+ * appear to collide, and doubles as the cue that a title continues past the
+ * edge — the reason the row is worth hovering in the first place.
+ */
+.title-fade {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 calc(100% - 2.25rem),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    #000 calc(100% - 2.25rem),
+    transparent 100%
+  );
+}
+
+/*
  * Makes a group of placeholders share one sweep.
  *
  * Each .skeleton animates its own background, so several stacked together

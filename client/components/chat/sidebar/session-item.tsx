@@ -1,11 +1,36 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+} from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Menu, MenuItem } from "@/components/ui/menu";
+import { useOverflow } from "@/hooks/use-overflow";
 import { transition } from "@/lib/motion";
+
+/**
+ * Pixels of title travelled per second while revealing.
+ *
+ * Reading pace, and expressed as a speed rather than a duration so every title
+ * moves alike: a fixed duration would crawl through a title one word too long
+ * and race through a very long one.
+ */
+const REVEAL_SPEED_PX_PER_SECOND = 26;
+
+/**
+ * Pause before the title starts moving, in seconds.
+ *
+ * Rows are passed over on the way elsewhere, and text that leaps the instant
+ * the pointer touches it makes the whole list feel twitchy. Long enough to
+ * mean the pointer stopped here on purpose.
+ */
+const REVEAL_DELAY_SECONDS = 0.55;
 
 interface SessionItemProps {
   id: string;
@@ -39,7 +64,22 @@ export function SessionItem({
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
+  const [hovered, setHovered] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const {
+    ref: titleRef,
+    overflow,
+    isOverflowing: clipped,
+  } = useOverflow<HTMLSpanElement>();
+
+  // Only while there is something to reveal. Scrolling a title that already
+  // fits would move it for no reason, and scrolling under an open menu would
+  // pull the eye away from the choice being made.
+  const revealing = hovered && clipped && !menuOpen;
+
+  // Travel time only; the pause at each end is the animation's delay.
+  const duration = overflow / REVEAL_SPEED_PX_PER_SECOND;
 
   useEffect(() => {
     if (editing) inputRef.current?.select();
@@ -81,14 +121,17 @@ export function SessionItem({
   }
 
   return (
-    <li className="group/item relative">
+    <li
+      className="group/item relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <Link
         href={`/chat/${id}`}
         onClick={onNavigate}
         data-active={active}
         className="
-          block truncate rounded-[var(--radius-sm)] py-2 pl-3 pr-11
-          [@media(hover:hover)]:pr-9
+          block overflow-hidden rounded-[var(--radius-sm)] px-3 py-2
           text-small text-ink-muted
           transition-colors duration-150
           hover:bg-white/[0.05] hover:text-ink
@@ -108,10 +151,35 @@ export function SessionItem({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={transition.base}
-            title={title}
-            className="block truncate text-white"
+            // Faded only while there is something past the edge to reveal, so
+            // a title that fits keeps its last characters at full strength.
+            className={`block ${clipped ? "title-fade" : ""}`}
           >
-            {title}
+            {/*
+              The measured element is the inline text, not the row: its width is
+              the width of the title, which is what the row's width is compared
+              against to decide whether any of it is hidden.
+            */}
+            <span
+              ref={titleRef}
+              // Native tooltip only when the title is both clipped and not
+              // being revealed some other way, so hovering does not produce a
+              // tooltip competing with the text it is already showing.
+              title={clipped ? title : undefined}
+              style={
+                {
+                  "--scroll-distance": `${overflow}px`,
+                  "--scroll-duration": `${duration}s`,
+                  "--scroll-delay": `${REVEAL_DELAY_SECONDS}s`,
+                } as CSSProperties
+              }
+              className={`
+                block w-max max-w-full truncate whitespace-nowrap text-white
+                ${revealing ? "title-scroll max-w-none" : ""}
+              `}
+            >
+              {title}
+            </span>
           </motion.span>
         </AnimatePresence>
       </Link>
@@ -126,9 +194,8 @@ export function SessionItem({
         data-open={menuOpen}
         className="
           absolute right-1 top-1/2 -translate-y-1/2 rounded-[6px] p-2.5
-          text-ink-faint
-          transition-[opacity,color,background-color] duration-150
-          hover:bg-white/10 hover:text-ink
+          text-ink
+          transition-opacity duration-150
           focus-visible:opacity-100
           data-[open=true]:opacity-100
           [@media(hover:hover)]:p-1.5
@@ -136,6 +203,12 @@ export function SessionItem({
           [@media(hover:hover)]:group-hover/item:opacity-100
         "
       >
+        {/*
+          Floats above the title rather than reserving space beside it, so the
+          full width of the row is the title's to use. The glyph alone, with no
+          chip behind it: a background here would sit over moving text and read
+          as a second surface inside a row that is already one.
+        */}
         <MoreHorizontal size={15} strokeWidth={2} />
       </button>
 
