@@ -7,6 +7,7 @@ import { Menu } from "lucide-react";
 import { Sidebar } from "./sidebar/sidebar";
 import { SidebarToggle } from "./sidebar/sidebar-toggle";
 import { MessageList } from "./message-list";
+import { MessageListSkeleton } from "./message-list-skeleton";
 import { EmptyState } from "./empty-state";
 import { ErrorNotice } from "./error-notice";
 import { Notice } from "./notice";
@@ -183,7 +184,31 @@ export function ChatView({ chatId }: { chatId?: string }) {
             </motion.div>
           )}
 
-          {view === "loading" && <div key="loading" className="flex-1" />}
+          {view === "loading" && (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={transition.base}
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              <MessageListSkeleton />
+
+              {/* The composer needs no data, so it is real rather than a
+                  placeholder. Holding its place also means the transcript does
+                  not resize under it when the messages arrive. */}
+              <div className="shrink-0 px-5 pb-5 sm:px-6">
+                <div className="mx-auto w-full max-w-[46rem]">
+                  <MessageInput
+                    onSubmit={send}
+                    disabled
+                    placeholder="Reply, or ask for a change…"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </main>
 

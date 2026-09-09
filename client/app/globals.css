@@ -167,6 +167,20 @@ select:focus-visible {
   animation: skeleton-sweep 1.8s var(--ease-in-out-soft) infinite;
 }
 
+/*
+ * Makes a group of placeholders share one sweep.
+ *
+ * Each .skeleton animates its own background, so several stacked together
+ * shimmer out of step and read as separate blinking parts rather than one
+ * surface waiting to fill. Fixing the gradient to the viewport instead of to
+ * each element lets the highlight travel across the whole group, the way light
+ * crosses a physical object.
+ */
+.skeleton-group .skeleton {
+  background-attachment: fixed;
+  background-size: 60vw 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
