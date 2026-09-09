@@ -22,7 +22,7 @@ import { transition } from "@/lib/motion";
  * though it might continue; a gap is what makes it obvious the title is
  * finished and nothing is being withheld.
  */
-const REVEAL_GAP_PX = 14;
+const REVEAL_GAP_PX = 8;
 
 interface SessionItemProps {
   id: string;
@@ -188,9 +188,14 @@ export function SessionItem({
               ref={clipRef}
               className="block overflow-hidden whitespace-nowrap"
             >
+              {/*
+                No `title` attribute: the browser's tooltip would appear over
+                the row a moment after hovering, saying the same thing the
+                title is at that point scrolling to show, and covering the row
+                below while it did.
+              */}
               <span
                 ref={textRef}
-                title={title}
                 style={
                   { "--scroll-distance": `${overflow}px` } as CSSProperties
                 }
