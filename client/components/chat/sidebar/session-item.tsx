@@ -14,11 +14,15 @@ import { Menu, MenuItem } from "@/components/ui/menu";
 import { transition } from "@/lib/motion";
 
 /**
- * Where the cover behind the options button becomes fully opaque, as a
- * fraction of its width. Matches the gradient stop in `.title-cover`: left of
- * this the cover is still fading in, so text there would show through.
+ * Clear space left between the end of a revealed title and the cover, in
+ * pixels.
+ *
+ * The title scrolls so its last character stops short of the cover entirely,
+ * rather than up against it. A word ending exactly at an edge still reads as
+ * though it might continue; a gap is what makes it obvious the title is
+ * finished and nothing is being withheld.
  */
-const COVER_OPAQUE_FRACTION = 0.55;
+const REVEAL_GAP_PX = 14;
 
 interface SessionItemProps {
   id: string;
@@ -72,18 +76,26 @@ export function SessionItem({
     const cover = coverRef.current;
 
     if (clip && text && cover) {
-      // The end of the title has to clear the cover, not merely reach the edge
-      // of the row: stopping at the edge leaves the last words sitting behind
-      // the button, which is the part worth scrolling to read. Measured from
-      // where the cover turns opaque, so the travel stays right if the button
-      // or its padding ever changes.
+      // The end of the title has to come to rest clear of the cover, not
+      // merely reach the edge of the row: stopping at the edge leaves the last
+      // words behind the button, which is the part worth scrolling to read.
+      //
+      // Measured to where the cover begins — its left edge, not the point it
+      // turns opaque — and then pulled back further by a gap, so the last
+      // character finishes in open space rather than against the fade. Taken
+      // from the cover's own box, so the travel stays right if the button or
+      // its padding ever changes.
       const clipBox = clip.getBoundingClientRect();
       const coverBox = cover.getBoundingClientRect();
-      const opaqueFrom =
-        coverBox.left + coverBox.width * COVER_OPAQUE_FRACTION;
-      const usable = opaqueFrom - clipBox.left;
+      const usable = coverBox.left - clipBox.left - REVEAL_GAP_PX;
 
-      setOverflow(Math.max(0, text.scrollWidth - usable));
+      // Nothing to reveal unless the row is actually clipping the title. The
+      // gap makes the resting place narrower than the row, so without this a
+      // title that fits perfectly well would still shuffle sideways to sit
+      // inside the gap — motion with nothing to show.
+      const hidden = text.scrollWidth > clip.clientWidth;
+
+      setOverflow(hidden ? Math.max(0, text.scrollWidth - usable) : 0);
     }
 
     setHovered(true);
