@@ -10,8 +10,16 @@ export const queryKeys = {
   currentUser: ["current-user"] as const,
 
   /** The sidebar's conversation list. */
-  sessions: ["sessions"] as const,
+  sessions: ["session-list"] as const,
 
-  /** One conversation with its messages. */
-  session: (chatId: string) => ["sessions", chatId] as const,
+  /**
+   * One conversation with its messages.
+   *
+   * Deliberately not nested under the list's key. React Query matches keys by
+   * prefix, so while this was ["sessions", chatId] every write aimed at the
+   * list — a rename, a delete, the clear on sign-out — also matched each
+   * conversation's history and dropped it. The chat then rendered as if it had
+   * no messages, which is the empty new-chat screen.
+   */
+  session: (chatId: string) => ["session", chatId] as const,
 } as const;

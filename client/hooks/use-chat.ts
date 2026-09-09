@@ -62,8 +62,9 @@ export function useChat({
     data: history,
     isPending,
     error: historyError,
+    refetch: reload,
   } = useQuery({
-    queryKey: queryKeys.session(chatId ?? ""),
+    queryKey: queryKeys.session(chatId ?? "new"),
     queryFn: () => api.getSession(chatId!),
     enabled: Boolean(chatId),
   });
@@ -237,6 +238,12 @@ export function useChat({
     error: error ?? (historyError ? "Could not load this chat" : null),
     notice,
     loading,
+    // Kept separate from `error` so the view can tell "this conversation could
+    // not be loaded" from "the last message failed to send". The first has no
+    // messages to show around it, so it cannot be rendered as a conversation.
+    loadFailed: Boolean(chatId) && Boolean(historyError),
+    /** Retries loading the history, for a conversation that failed to open. */
+    reload,
     send,
     stop,
     retry,

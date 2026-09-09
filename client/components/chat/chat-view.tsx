@@ -47,6 +47,8 @@ export function ChatView({ chatId }: { chatId?: string }) {
     error,
     notice,
     loading,
+    loadFailed,
+    reload,
     send,
     retry,
   } = useChat({
@@ -70,8 +72,18 @@ export function ChatView({ chatId }: { chatId?: string }) {
    * Which view to show. While an existing conversation loads, neither is
    * shown: rendering the empty state first would flash the new-chat screen
    * before the messages arrive.
+   *
+   * A conversation that failed to load is called out rather than falling
+   * through to "empty", which would silently show the new-chat screen at a URL
+   * that names a real conversation and read as an unexplained redirect.
    */
-  const view = loading ? "loading" : started ? "conversation" : "empty";
+  const view = loading
+    ? "loading"
+    : loadFailed
+      ? "failed"
+      : started
+        ? "conversation"
+        : "empty";
 
   return (
     <div className="flex h-dvh overflow-hidden bg-[var(--color-canvas)]">
@@ -152,6 +164,23 @@ export function ChatView({ chatId }: { chatId?: string }) {
               error={error}
               onRetry={retry}
             />
+          )}
+
+          {view === "failed" && (
+            <motion.div
+              key="failed"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={transition.base}
+              className="flex flex-1 items-center justify-center px-5"
+            >
+              <div className="w-full max-w-[26rem]">
+                <ErrorNotice
+                  message="Could not load this conversation."
+                  onRetry={() => void reload()}
+                />
+              </div>
+            </motion.div>
           )}
 
           {view === "loading" && <div key="loading" className="flex-1" />}
