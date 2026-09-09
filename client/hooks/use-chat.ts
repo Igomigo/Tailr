@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import * as api from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
@@ -8,6 +8,15 @@ import type { ChatMessage, ChatSession } from "@/lib/types";
 
 /** What the assistant is currently doing, used to pick the right indicator. */
 export type ChatStatus = "idle" | "thinking" | "streaming" | "generating";
+
+/**
+ * Stands in for "no messages yet".
+ *
+ * A shared constant rather than a fresh `[]`, so the identity stays stable
+ * across renders and the memo that joins the lists is not invalidated every
+ * time by an array that never had anything in it.
+ */
+const EMPTY_MESSAGES: ChatMessage[] = [];
 
 interface UseChatOptions {
   chatId?: string;
@@ -41,7 +50,6 @@ export function useChat({
   onSessionReady,
   onTitle,
 }: UseChatOptions = {}) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingText, setStreamingText] = useState("");
   const [status, setStatus] = useState<ChatStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +59,35 @@ export function useChat({
   const abortRef = useRef<AbortController | null>(null);
   // Kept so a failed turn can be resent without retyping.
   const lastAttemptRef = useRef<{ text: string; files: File[] } | null>(null);
+
+  // Messages added during this visit: the message just sent, and replies as
+  // they finish streaming. The conversation's saved history is not copied in
+  // here — it is read from the query below and the two are joined at render.
+  //
+  // Tagged with the conversation they were sent to so they can be discarded on
+  // sight once the route moves elsewhere. Clearing them from an effect instead
+  // would leave one render in which the previous conversation's pending
+  // messages appear under the newly opened one.
+  const [pendingTurn, setPendingTurn] = useState<{
+    chatId: string | undefined;
+    messages: ChatMessage[];
+  }>({ chatId, messages: [] });
+
+  const localMessages =
+    pendingTurn.chatId === chatId ? pendingTurn.messages : EMPTY_MESSAGES;
+
+  /** Updates this visit's messages, keeping them tied to the open chat. */
+  const setLocalMessages = useCallback(
+    (update: (current: ChatMessage[]) => ChatMessage[]): void => {
+      setPendingTurn((current) => ({
+        chatId: sessionIdRef.current,
+        messages: update(
+          current.chatId === sessionIdRef.current ? current.messages : [],
+        ),
+      }));
+    },
+    [],
+  );
 
   useEffect(() => {
     sessionIdRef.current = chatId;
@@ -69,18 +106,28 @@ export function useChat({
     enabled: Boolean(chatId),
   });
 
-  // The streamed turn is owned here rather than in the cache, so opening a
-  // conversation seeds the local list from whatever the query returned.
-  useEffect(() => {
-    if (!chatId) {
-      setMessages([]);
-      return;
-    }
+  // Derived during render rather than copied into state by an effect. An
+  // effect runs *after* the render that reads the query, so on a warm cache —
+  // clicking a conversation the sidebar has already loaded — the first render
+  // saw history present but the message list still empty, and drew the
+  // new-chat screen before correcting itself. Reading straight from the query
+  // means the messages are there on the very first render.
+  const messages = useMemo(() => {
+    // Tool messages carry raw JSON meant for the model, not the user. The
+    // document URL they produce surfaces on the assistant message that follows.
+    const saved =
+      history?.messages.filter((message) => message.role !== "tool") ?? [];
 
-    if (history) {
-      setMessages(history.messages.filter((message) => message.role !== "tool"));
-    }
-  }, [chatId, history]);
+    // A refetch after a turn returns the messages that turn just added, which
+    // are still held locally too. Showing whichever the server has and keeping
+    // only the rest means the same message cannot appear twice.
+    const savedIds = new Set(saved.map((message) => message._id));
+    const pending = localMessages.filter(
+      (message) => !savedIds.has(message._id),
+    );
+
+    return [...saved, ...pending];
+  }, [history, localMessages]);
 
   const loading = Boolean(chatId) && isPending;
 
@@ -108,7 +155,7 @@ export function useChat({
         })),
         createdAt: new Date().toISOString(),
       };
-      setMessages((current) => [...current, optimistic]);
+      setLocalMessages((current) => [...current, optimistic]);
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -144,7 +191,7 @@ export function useChat({
               // React lists are keyed by id, so swapping it would unmount the
               // message and mount a new one, making it blink out and back for
               // a message that never actually changed.
-              setMessages((current) =>
+              setLocalMessages((current) =>
                 current.map((message) =>
                   message._id === optimistic._id
                     ? { ...event.message, _id: optimistic._id }
@@ -168,7 +215,7 @@ export function useChat({
                 streamed = "";
                 setStatus("thinking");
                 setStreamingText("");
-                setMessages((current) => [...current, event.message]);
+                setLocalMessages((current) => [...current, event.message]);
               }
               break;
 
@@ -186,7 +233,7 @@ export function useChat({
 
             case "error":
               setError(event.error);
-              setMessages((current) =>
+              setLocalMessages((current) =>
                 current.filter((message) => message._id !== optimistic._id),
               );
               break;
@@ -203,7 +250,7 @@ export function useChat({
             : "Something went wrong. Please try again.",
         );
         // Remove the optimistic message so a retry does not duplicate it.
-        setMessages((current) =>
+        setLocalMessages((current) =>
           current.filter((message) => message._id !== optimistic._id),
         );
       } finally {
@@ -216,7 +263,7 @@ export function useChat({
         if (createdId) onSessionReady?.(createdId);
       }
     },
-    [onSessionCreated, onSessionReady, onTitle],
+    [onSessionCreated, onSessionReady, onTitle, setLocalMessages],
   );
 
   /** Stops an in-flight response. */
