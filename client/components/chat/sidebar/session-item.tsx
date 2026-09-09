@@ -207,6 +207,7 @@ export function SessionItem({
         rather than changing with the length of the title beside it.
       */}
       <span
+        ref={coverRef}
         aria-hidden
         data-visible={hovered || menuOpen}
         style={
