@@ -13,6 +13,13 @@ import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { transition } from "@/lib/motion";
 
+/**
+ * Where the cover behind the options button becomes fully opaque, as a
+ * fraction of its width. Matches the gradient stop in `.title-cover`: left of
+ * this the cover is still fading in, so text there would show through.
+ */
+const COVER_OPAQUE_FRACTION = 0.55;
+
 interface SessionItemProps {
   id: string;
   title: string;
@@ -54,16 +61,31 @@ export function SessionItem({
   // overflow of its own, and the container is only ever as wide as the row.
   const clipRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
+  const coverRef = useRef<HTMLSpanElement>(null);
   const [overflow, setOverflow] = useState(0);
 
-  // Measured on hover rather than watched continuously. The width is only
+  // Measured on hover rather than watched continuously. The widths are only
   // needed at the moment the reveal starts, and by then the row is laid out.
   const handleEnter = (): void => {
     const clip = clipRef.current;
     const text = textRef.current;
-    if (clip && text) {
-      setOverflow(Math.max(0, text.scrollWidth - clip.clientWidth));
+    const cover = coverRef.current;
+
+    if (clip && text && cover) {
+      // The end of the title has to clear the cover, not merely reach the edge
+      // of the row: stopping at the edge leaves the last words sitting behind
+      // the button, which is the part worth scrolling to read. Measured from
+      // where the cover turns opaque, so the travel stays right if the button
+      // or its padding ever changes.
+      const clipBox = clip.getBoundingClientRect();
+      const coverBox = cover.getBoundingClientRect();
+      const opaqueFrom =
+        coverBox.left + coverBox.width * COVER_OPAQUE_FRACTION;
+      const usable = opaqueFrom - clipBox.left;
+
+      setOverflow(Math.max(0, text.scrollWidth - usable));
     }
+
     setHovered(true);
   };
 
@@ -178,12 +200,15 @@ export function SessionItem({
         edge. Its colour is composited here rather than left translucent: a
         see-through cover would show the very text it exists to hide.
 
-        Shown only while the title is actually moving — at rest the title is
-        truncated well clear of the button and needs nothing over it.
+        Shown whenever the button is, not only while a title is moving. A title
+        can reach the button without being long enough to be worth scrolling,
+        and the dots then sit directly on the text; giving every hovered row the
+        same ground under them also means the button always looks the same
+        rather than changing with the length of the title beside it.
       */}
       <span
         aria-hidden
-        data-visible={revealing}
+        data-visible={hovered || menuOpen}
         style={
           {
             "--cover-color": active
@@ -195,8 +220,9 @@ export function SessionItem({
           title-cover
           pointer-events-none absolute right-0 top-1/2 h-8 w-16 -translate-y-1/2
           rounded-r-[var(--radius-sm)]
-          opacity-0 transition-opacity duration-150
+          transition-opacity duration-150
           data-[visible=true]:opacity-100
+          [@media(hover:hover)]:opacity-0
         "
       />
 
