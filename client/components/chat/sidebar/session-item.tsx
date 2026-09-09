@@ -11,26 +11,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Menu, MenuItem } from "@/components/ui/menu";
-import { useOverflow } from "@/hooks/use-overflow";
 import { transition } from "@/lib/motion";
-
-/**
- * Pixels of title travelled per second while revealing.
- *
- * Reading pace, and expressed as a speed rather than a duration so every title
- * moves alike: a fixed duration would crawl through a title one word too long
- * and race through a very long one.
- */
-const REVEAL_SPEED_PX_PER_SECOND = 26;
-
-/**
- * Pause before the title starts moving, in seconds.
- *
- * Rows are passed over on the way elsewhere, and text that leaps the instant
- * the pointer touches it makes the whole list feel twitchy. Long enough to
- * mean the pointer stopped here on purpose.
- */
-const REVEAL_DELAY_SECONDS = 0.55;
 
 interface SessionItemProps {
   id: string;
@@ -67,19 +48,29 @@ export function SessionItem({
   const [hovered, setHovered] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const {
-    ref: titleRef,
-    overflow,
-    isOverflowing: clipped,
-  } = useOverflow<HTMLSpanElement>();
+  // How far the title runs past the row: the text's natural width against the
+  // width available to it. Two elements are involved because neither number
+  // can come from one of them — the text is truncated, so it never reports
+  // overflow of its own, and the container is only ever as wide as the row.
+  const clipRef = useRef<HTMLSpanElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [overflow, setOverflow] = useState(0);
+
+  // Measured on hover rather than watched continuously. The width is only
+  // needed at the moment the reveal starts, and by then the row is laid out.
+  const handleEnter = (): void => {
+    const clip = clipRef.current;
+    const text = textRef.current;
+    if (clip && text) {
+      setOverflow(Math.max(0, text.scrollWidth - clip.clientWidth));
+    }
+    setHovered(true);
+  };
 
   // Only while there is something to reveal. Scrolling a title that already
   // fits would move it for no reason, and scrolling under an open menu would
   // pull the eye away from the choice being made.
-  const revealing = hovered && clipped && !menuOpen;
-
-  // Travel time only; the pause at each end is the animation's delay.
-  const duration = overflow / REVEAL_SPEED_PX_PER_SECOND;
+  const revealing = hovered && overflow > 0 && !menuOpen;
 
   useEffect(() => {
     if (editing) inputRef.current?.select();
@@ -123,7 +114,7 @@ export function SessionItem({
   return (
     <li
       className="group/item relative"
-      onMouseEnter={() => setHovered(true)}
+      onMouseEnter={handleEnter}
       onMouseLeave={() => setHovered(false)}
     >
       <Link
@@ -151,38 +142,63 @@ export function SessionItem({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={transition.base}
-            // Faded only while there is something past the edge to reveal, so
-            // a title that fits keeps its last characters at full strength.
-            className={`block ${clipped ? "title-fade" : ""}`}
+            className="block"
           >
             {/*
-              The measured element is the inline text, not the row: its width is
-              the width of the title, which is what the row's width is compared
-              against to decide whether any of it is hidden.
+              Two elements on purpose. This one clips and stays put, so it can
+              be measured; the one inside it is free to be wider than the row
+              and is what slides. Measuring and moving the same element makes
+              the distance collapse to zero the moment it starts moving.
             */}
             <span
-              ref={titleRef}
-              // Native tooltip only when the title is both clipped and not
-              // being revealed some other way, so hovering does not produce a
-              // tooltip competing with the text it is already showing.
-              title={clipped ? title : undefined}
-              style={
-                {
-                  "--scroll-distance": `${overflow}px`,
-                  "--scroll-duration": `${duration}s`,
-                  "--scroll-delay": `${REVEAL_DELAY_SECONDS}s`,
-                } as CSSProperties
-              }
-              className={`
-                block w-max max-w-full truncate whitespace-nowrap text-white
-                ${revealing ? "title-scroll max-w-none" : ""}
-              `}
+              ref={clipRef}
+              className="block overflow-hidden whitespace-nowrap"
             >
-              {title}
+              <span
+                ref={textRef}
+                title={title}
+                style={
+                  { "--scroll-distance": `${overflow}px` } as CSSProperties
+                }
+                className={`
+                  inline-block max-w-full truncate align-bottom text-white
+                  ${revealing ? "title-scroll max-w-none" : ""}
+                `}
+              >
+                {title}
+              </span>
             </span>
           </motion.span>
         </AnimatePresence>
       </Link>
+
+      {/*
+        Sits between the title and the button, matching whatever the row is
+        currently painted, so a title scrolling past appears to slide behind an
+        edge. Its colour is composited here rather than left translucent: a
+        see-through cover would show the very text it exists to hide.
+
+        Shown only while the title is actually moving — at rest the title is
+        truncated well clear of the button and needs nothing over it.
+      */}
+      <span
+        aria-hidden
+        data-visible={revealing}
+        style={
+          {
+            "--cover-color": active
+              ? "color-mix(in srgb, #fff 7%, var(--color-surface))"
+              : "color-mix(in srgb, #fff 5%, var(--color-surface))",
+          } as CSSProperties
+        }
+        className="
+          title-cover
+          pointer-events-none absolute right-0 top-1/2 h-8 w-16 -translate-y-1/2
+          rounded-r-[var(--radius-sm)]
+          opacity-0 transition-opacity duration-150
+          data-[visible=true]:opacity-100
+        "
+      />
 
       <button
         type="button"

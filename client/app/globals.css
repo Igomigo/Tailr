@@ -171,54 +171,45 @@ select:focus-visible {
  * Sidebar title that reveals itself on hover.
  *
  * A long conversation title is clipped to the width of the rail. Hovering
- * slides it far enough left to read the rest, then returns it. The distance is
- * the element's own overflow, passed in as --scroll-distance, and the duration
- * scales with it, so a title one word too long does not crawl while a very
- * long one races.
- *
- * Held still for a moment at each end: starting the instant the pointer
- * arrives makes a row twitch as the cursor passes over it on the way
- * somewhere else.
+ * slides it left by however much is hidden, holds so the end can be read, then
+ * returns. Titles are a sentence at most, so one duration covers them all.
  */
 @keyframes title-reveal {
-  from {
+  0%,
+  15% {
     transform: translateX(0);
   }
-  to {
+  60%,
+  85% {
     transform: translateX(calc(-1 * var(--scroll-distance, 0px)));
+  }
+  100% {
+    transform: translateX(0);
   }
 }
 
-/*
- * Only the travel is in the keyframes, with the pause before it expressed as
- * a delay. Holding the ends inside the keyframes instead would make both the
- * pause and the speed fractions of one duration, so a longer title would rest
- * longer and move faster; here each stays fixed and only the travel grows.
- */
 .title-scroll {
-  animation: title-reveal var(--scroll-duration, 4s) var(--ease-in-out-soft)
-    var(--scroll-delay, 0.5s) infinite alternate;
+  animation: title-reveal 4.5s var(--ease-in-out-soft) infinite;
 }
 
 /*
- * Dissolves the last few pixels of a title into the row.
+ * Cover behind the options button, hiding the title as it passes underneath.
  *
- * The options button floats above the text rather than reserving space beside
- * it, so the title runs the full width of the row and would otherwise slide
- * visibly underneath the button. Fading it out first means the two never
- * appear to collide, and doubles as the cue that a title continues past the
- * edge — the reason the row is worth hovering in the first place.
+ * The button floats above the text rather than reserving space beside it, so
+ * a scrolling title would otherwise run visibly through the dots. A gradient
+ * mask was not enough on its own: faded text still shows against the dots at
+ * this size. An opaque panel that matches the row is unambiguous — the title
+ * slides behind it and is simply gone, the way it would behind an edge.
+ *
+ * The gradient's left end is transparent so the cover has no visible seam;
+ * only its right portion is solid, which is where the button sits.
  */
-.title-fade {
-  -webkit-mask-image: linear-gradient(
+.title-cover {
+  background: linear-gradient(
     to right,
-    #000 calc(100% - 2.25rem),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    #000 calc(100% - 2.25rem),
-    transparent 100%
+    transparent 0%,
+    var(--cover-color) 55%,
+    var(--cover-color) 100%
   );
 }
 
