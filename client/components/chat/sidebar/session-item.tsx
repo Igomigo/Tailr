@@ -22,7 +22,7 @@ import { transition } from "@/lib/motion";
  * though it might continue; a gap is what makes it obvious the title is
  * finished and nothing is being withheld.
  */
-const REVEAL_GAP_PX = 8;
+const REVEAL_GAP_PX = 4;
 
 interface SessionItemProps {
   id: string;
