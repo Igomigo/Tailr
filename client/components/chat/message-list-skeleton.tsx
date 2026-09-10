@@ -8,23 +8,37 @@ import { Skeleton } from "@/components/ui/skeleton";
  * stack of bars — means the placeholder reads as a conversation from the first
  * frame, and the messages that replace it land on the same silhouette.
  *
+ * Enough turns to fill the screen: a transcript that stops halfway down looks
+ * like a conversation that failed to load rather than one still arriving.
  * Widths are per-line so no two lines end together, which is what stops the
- * block from looking like a table. The last line of each reply is shortest,
- * the way a paragraph ends mid-column.
+ * block from looking like a table, and each reply's last line is shortest, the
+ * way a paragraph ends mid-column.
  */
 const EXCHANGES = [
-  { ask: "52%", reply: ["96%", "88%", "64%"] },
-  { ask: "38%", reply: ["92%", "97%", "71%"] },
+  { ask: "46%", reply: ["97%", "89%", "94%", "58%"] },
+  { ask: "63%", reply: ["92%", "96%", "71%"] },
+  { ask: "34%", reply: ["95%", "87%", "93%", "46%"] },
+  { ask: "55%", reply: ["90%", "63%"] },
 ];
+
+/**
+ * Height of one line of placeholder text.
+ *
+ * Assistant replies are 15px type on 1.7 leading, so each line occupies about
+ * 25px. The bar itself is shorter than that and the remainder is left as gap,
+ * which is what a line of text actually looks like: ink over blank space.
+ */
+const LINE_CLASS = "h-[15px] rounded-[5px]";
 
 /** One turn from the user: a short bubble, aligned right. */
 function AskSkeleton({ width }: { width: string }) {
   return (
     <div className="flex justify-end">
-      {/* Matches UserMessage's bubble: 20px radius, tightened at the corner
-          nearest its owner, and the same 44px height a single line occupies. */}
+      {/* Matches UserMessage exactly: a 20px radius tightened to 8px at the
+          corner nearest its owner, and the height a single line of body text
+          occupies inside that bubble's padding. */}
       <Skeleton
-        className="h-11 rounded-[20px] rounded-br-lg"
+        className="h-[49px] rounded-[20px] rounded-br-lg"
         style={{ width }}
       />
     </div>
@@ -34,9 +48,9 @@ function AskSkeleton({ width }: { width: string }) {
 /** One reply from the assistant: plain lines across the canvas, no bubble. */
 function ReplySkeleton({ widths }: { widths: string[] }) {
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-[10px]">
       {widths.map((width, index) => (
-        <Skeleton key={index} className="h-3.5 rounded-[4px]" style={{ width }} />
+        <Skeleton key={index} className={LINE_CLASS} style={{ width }} />
       ))}
     </div>
   );
@@ -57,11 +71,13 @@ export function MessageListSkeleton() {
       <div className="skeleton-group mx-auto flex w-full max-w-[46rem] flex-col gap-7 px-5 pb-10 pt-8 sm:px-6">
         {EXCHANGES.map((exchange, index) => (
           // Fades down the column: the top of the conversation is where the
-          // eye starts, and the lower turns are further from arriving.
+          // eye starts, and the lower turns are further from arriving. Eased
+          // rather than stepped evenly, so the last turn is faint instead of
+          // half-visible and the column has no hard end.
           <div
             key={index}
             className="flex flex-col gap-7"
-            style={{ opacity: 1 - index * 0.35 }}
+            style={{ opacity: 1 - (index / EXCHANGES.length) ** 1.5 * 0.82 }}
           >
             <AskSkeleton width={exchange.ask} />
             <ReplySkeleton widths={exchange.reply} />

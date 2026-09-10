@@ -132,14 +132,29 @@ export function SessionItem({
 
   if (editing) {
     return (
-      <li>
+      // Inset by a hair so the field's border and the ring around it are not
+      // clipped by the scrolling column, whose edges the rows otherwise meet
+      // exactly. A border cut off along one side reads as a broken element
+      // rather than a field waiting for input.
+      <li className="px-1 py-0.5">
         <input
           ref={inputRef}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={() => void commit()}
-          className="w-full rounded-[var(--radius-sm)] border border-white/20 bg-white/[0.06] px-3 py-2 text-small text-ink focus:border-white/35 focus:outline-none"
+          // The ring is drawn as a shadow rather than an outline: an outline
+          // sits outside the element's box and would be clipped again, while a
+          // shadow is painted within the space reserved above.
+          className="
+            w-full rounded-[var(--radius-sm)]
+            border border-white/25 bg-white/[0.06]
+            px-[11px] py-2 text-small text-ink
+            outline-none
+            transition-[border-color,box-shadow] duration-150
+            focus:border-white/40
+            focus:shadow-[0_0_0_3px_rgba(255,255,255,0.07)]
+          "
         />
       </li>
     );

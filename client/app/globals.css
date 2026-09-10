@@ -164,7 +164,11 @@ select:focus-visible {
     transparent 80%
   );
   background-size: 200% 100%;
-  animation: skeleton-sweep 1.8s var(--ease-in-out-soft) infinite;
+  /* Unhurried on purpose: a fast sweep reads as a progress indicator, which
+     promises a pace the network has not agreed to. Linear rather than eased,
+     so the highlight travels at one speed instead of accelerating through the
+     middle of every pass. */
+  animation: skeleton-sweep 2.8s linear infinite;
 }
 
 /*
