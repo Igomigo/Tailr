@@ -84,13 +84,13 @@ export function MessageInput({
       <div
         className="
           relative rounded-[30px]
-          border border-white/12
-          bg-white/[0.04] backdrop-blur-xl
+          border border-white/[0.14]
+          bg-white/[0.06] backdrop-blur-xl
           ring-0 ring-white/25
           transition-[box-shadow,border-color,background-color] duration-300
           ease-[cubic-bezier(0.32,0.72,0,1)]
           focus-within:border-white/25
-          focus-within:bg-white/[0.07]
+          focus-within:bg-white/[0.09]
           focus-within:ring-4
         "
       >

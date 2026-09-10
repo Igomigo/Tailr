@@ -10,8 +10,10 @@ import remarkGfm from "remark-gfm";
  * dense by nature.
  */
 export function Markdown({ children }: { children: string }) {
+  // Leading is inherited from the body token rather than set here, so the
+  // transcript keeps the 16px/26px rhythm the type scale defines.
   return (
-    <div className="text-body leading-[1.7] text-ink">
+    <div className="text-body text-ink">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

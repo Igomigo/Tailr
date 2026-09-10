@@ -55,7 +55,7 @@ export function UserMessage({ content, attachments }: UserMessageProps) {
         {/* A file may be sent with no message, in which case there is no
             bubble to draw. */}
         {trimmed && (
-          <div className="rounded-[20px] rounded-br-lg bg-white/[0.07] px-4 py-3 text-body text-ink">
+          <div className="rounded-[20px] rounded-br-lg bg-white/[0.09] px-4 py-3 text-body text-ink">
             <p
               className="whitespace-pre-wrap break-words"
               style={

@@ -8,17 +8,28 @@
  * and the streaming cursor. Nothing else uses it.
  */
 @theme {
-  /* Surfaces, from furthest back to nearest front. Near-black rather than
-     pure black, which is harsh and flattens depth. */
-  --color-canvas: #0a0a0b;
-  --color-surface: #121214;
+  /* Surfaces, from furthest back to nearest front.
+
+     The canvas is pure black, and so is the rail: the two read as one ground
+     with a rule drawn between them, rather than as panels at different
+     depths. Everything that must sit above that ground earns its separation
+     from a lift the eye can still see against black. */
+  --color-canvas: #000000;
+  --color-surface: #0e0e10;
   --color-raised: #17171a;
   --color-overlay: #1c1c20;
 
-  /* Hairlines. Borders are barely visible by design; hierarchy comes from
-     type and spacing, not boxes. */
-  --color-line: rgba(255, 255, 255, 0.07);
-  --color-line-strong: rgba(255, 255, 255, 0.12);
+  /* The sidebar shares the canvas. Kept as its own token so the rail can be
+     lifted off the conversation later without hunting for the places it is
+     painted. */
+  --color-rail: #000000;
+
+  /* Hairlines. Still quiet — hierarchy comes from type and spacing, not boxes
+     — but lifted from 7%, since with the rail and the conversation sharing one
+     black ground the rule between them is the only thing dividing them and has
+     to be visible on its own. */
+  --color-line: rgba(255, 255, 255, 0.1);
+  --color-line-strong: rgba(255, 255, 255, 0.16);
 
   /* Text */
   --color-ink: #ededef;
@@ -45,13 +56,20 @@
   --text-title--line-height: 1.3;
   --text-title--letter-spacing: -0.02em;
 
-  --text-body: 0.9375rem;
-  --text-body--line-height: 1.65;
+  /* Reading sizes: 16px on 26px for the transcript, 14px on 20px for the rail.
+     The product's content is resume drafts — long text read closely and
+     checked for errors — which wants the larger of the plausible sizes rather
+     than the smaller. Ratios are unchanged; only the sizes moved up a step. */
+  --text-body: 1rem;
+  --text-body--line-height: 1.625;
 
-  --text-small: 0.8125rem;
-  --text-small--line-height: 1.5;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.4286;
 
-  --text-micro: 0.75rem;
+  /* Kept one step below small, as it was before it moved up. At 12px it would
+     have fallen two steps behind and read as fine print rather than as the
+     quiet end of the same scale. */
+  --text-micro: 0.8125rem;
   --text-micro--line-height: 1.4;
 
   --radius-sm: 0.5rem;
@@ -72,6 +90,9 @@
   --color-surface: #ffffff;
   --color-raised: #f4f4f6;
   --color-overlay: #ffffff;
+  /* Recessed the same way as in the dark theme — a step back from the canvas
+     rather than pure black, which against white would read as a filled bar. */
+  --color-rail: #f1f1f4;
   --color-line: rgba(0, 0, 0, 0.08);
   --color-line-strong: rgba(0, 0, 0, 0.14);
   --color-ink: #16161a;
@@ -98,7 +119,8 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-body);
-  line-height: 1.65;
+  /* Read from the token rather than repeated, so the two cannot drift. */
+  line-height: var(--text-body--line-height);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;

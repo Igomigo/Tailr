@@ -24,11 +24,11 @@ const EXCHANGES = [
 /**
  * Height of one line of placeholder text.
  *
- * Assistant replies are 15px type on 1.7 leading, so each line occupies about
- * 25px. The bar itself is shorter than that and the remainder is left as gap,
- * which is what a line of text actually looks like: ink over blank space.
+ * Assistant replies are 16px type on 26px leading, so each line occupies 26px.
+ * The bar itself is shorter than that and the remainder is left as gap, which
+ * is what a line of text actually looks like: ink over blank space.
  */
-const LINE_CLASS = "h-[15px] rounded-[5px]";
+const LINE_CLASS = "h-4 rounded-[5px]";
 
 /** One turn from the user: a short bubble, aligned right. */
 function AskSkeleton({ width }: { width: string }) {
@@ -36,9 +36,10 @@ function AskSkeleton({ width }: { width: string }) {
     <div className="flex justify-end">
       {/* Matches UserMessage exactly: a 20px radius tightened to 8px at the
           corner nearest its owner, and the height a single line of body text
-          occupies inside that bubble's padding. */}
+          occupies inside that bubble's padding — a 26px line box plus 24px of
+          vertical padding. */}
       <Skeleton
-        className="h-[49px] rounded-[20px] rounded-br-lg"
+        className="h-[50px] rounded-[20px] rounded-br-lg"
         style={{ width }}
       />
     </div>
@@ -49,6 +50,7 @@ function AskSkeleton({ width }: { width: string }) {
 function ReplySkeleton({ widths }: { widths: string[] }) {
   return (
     <div className="flex flex-col gap-[10px]">
+      {/* 16px bar + 10px gap = the 26px line box of a real reply. */}
       {widths.map((width, index) => (
         <Skeleton key={index} className={LINE_CLASS} style={{ width }} />
       ))}
