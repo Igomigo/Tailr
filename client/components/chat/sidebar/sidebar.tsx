@@ -65,7 +65,7 @@ function SessionList({
 
   return (
     <>
-      <p className="px-3 pb-1.5 pt-4 text-micro uppercase tracking-[0.12em] text-ink-faint">
+      <p className="px-1 pb-1.5 pt-4 text-micro uppercase tracking-[0.12em] text-ink-faint">
         Recent
       </p>
       <ul className="flex flex-col gap-0.5">
@@ -98,10 +98,10 @@ function SidebarContent({ onNavigate, ...list }: ContentProps) {
         onClick={onNavigate}
         className="
           flex items-center gap-2.5 rounded-[var(--radius-sm)]
-          border border-white/10 px-3 py-2.5
+          border border-white/[0.14] px-3 py-2.5
           text-small text-ink
           transition-colors duration-150
-          hover:border-white/20 hover:bg-white/[0.05]
+          hover:border-white/25 hover:bg-white/[0.08]
         "
       >
         <PenSquare size={15} strokeWidth={1.75} />
@@ -139,7 +139,7 @@ export function Sidebar({
         initial={false}
         animate={{ width: collapsed ? 0 : RAIL_WIDTH_PX }}
         transition={transition.base}
-        className="hidden shrink-0 overflow-hidden bg-surface md:block"
+        className="hidden shrink-0 overflow-hidden bg-[var(--color-rail)] md:block"
         style={{
           borderRight: collapsed ? "none" : "1px solid var(--color-line)",
         }}
@@ -165,7 +165,7 @@ export function Sidebar({
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={transition.base}
-              className="fixed inset-y-0 left-0 z-50 w-72 border-r border-[var(--color-line)] bg-[var(--color-surface)] md:hidden"
+              className="fixed inset-y-0 left-0 z-50 w-72 border-r border-[var(--color-line)] bg-[var(--color-rail)] md:hidden"
             >
               <button
                 type="button"

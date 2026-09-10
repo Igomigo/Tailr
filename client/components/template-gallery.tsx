@@ -49,13 +49,21 @@ export function TemplateGallery() {
                 onClick={() => setActive(template)}
                 className="group block w-full rounded-[var(--radius-md)] text-left"
               >
+                {/*
+                  Eased at both ends, unlike the decelerating curve used for
+                  entrances elsewhere. That curve travels 66% of the way in the
+                  first fifth of its duration, so the card appeared to jump and
+                  then creep — the time was there but never felt. Easing in as
+                  well as out is what makes the lift read as a response to the
+                  pointer rather than a switch being thrown.
+                */}
                 <div
                   className="
                     relative overflow-hidden
                     rounded-[var(--radius-md)] border border-[var(--color-line)]
                     bg-white opacity-75
-                    transition-[opacity,transform,border-color,box-shadow] duration-300
-                    ease-[cubic-bezier(0.32,0.72,0,1)]
+                    transition-[opacity,transform,border-color,box-shadow]
+                    duration-420 ease-in-out-soft
                     group-hover:-translate-y-1.5 group-hover:opacity-100
                     group-hover:border-[var(--color-line-strong)]
                     group-hover:shadow-[0_16px_40px_-12px_rgba(0,0,0,0.6)]
@@ -70,7 +78,9 @@ export function TemplateGallery() {
                     className="object-contain"
                   />
                 </div>
-                <p className="mt-3 text-small text-ink-muted transition-colors duration-200 group-hover:text-ink">
+                {/* Same timing as the card, so the name brightens with the
+                    movement rather than finishing ahead of it. */}
+                <p className="mt-3 text-small text-ink-muted transition-colors duration-420 ease-in-out-soft group-hover:text-ink">
                   {template.name}
                 </p>
                 <p className="hidden text-micro text-ink-faint sm:block">

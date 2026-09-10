@@ -146,10 +146,15 @@ export function SessionItem({
           // The ring is drawn as a shadow rather than an outline: an outline
           // sits outside the element's box and would be clipped again, while a
           // shadow is painted within the space reserved above.
+          //
+          // No horizontal padding of its own: the row's inset and this field's
+          // border already sit the text within a pixel of where the title was,
+          // and padding here would push it further right than the text it
+          // replaces.
           className="
             w-full rounded-[var(--radius-sm)]
             border border-white/25 bg-white/[0.06]
-            px-[11px] py-2 text-small text-ink
+            px-0 py-2 text-small text-ink
             outline-none
             transition-[border-color,box-shadow] duration-150
             focus:border-white/40
@@ -171,11 +176,11 @@ export function SessionItem({
         onClick={onNavigate}
         data-active={active}
         className="
-          block overflow-hidden rounded-[var(--radius-sm)] px-3 py-2
+          block overflow-hidden rounded-[var(--radius-sm)] px-1 py-2
           text-small text-ink-muted
           transition-colors duration-150
-          hover:bg-white/[0.05] hover:text-ink
-          data-[active=true]:bg-white/[0.07] data-[active=true]:text-ink
+          hover:bg-white/[0.08] hover:text-ink
+          data-[active=true]:bg-white/[0.11] data-[active=true]:text-ink
         "
       >
         {/*
@@ -244,9 +249,13 @@ export function SessionItem({
         data-visible={hovered || menuOpen}
         style={
           {
+            // Composited against the rail, which the rows sit on. Mixed to
+            // whichever of the row's own tints is showing — the active row is
+            // lighter than a merely hovered one — so the cover disappears into
+            // the row instead of reading as a patch laid over it.
             "--cover-color": active
-              ? "color-mix(in srgb, #fff 7%, var(--color-surface))"
-              : "color-mix(in srgb, #fff 5%, var(--color-surface))",
+              ? "color-mix(in srgb, #fff 11%, var(--color-rail))"
+              : "color-mix(in srgb, #fff 8%, var(--color-rail))",
           } as CSSProperties
         }
         className="
