@@ -52,6 +52,10 @@ export function MessageList({
     <div
       ref={containerRef}
       data-chat-scroll
+      // Gesture policy belongs on the element that actually scrolls. Without
+      // this, a long transcript can claim the first diagonal movement before
+      // the outer conversation surface receives it as a drawer swipe.
+      style={{ touchAction: "pan-y" }}
       onScroll={handleScroll}
       className="flex-1 overflow-y-auto overscroll-contain"
     >
