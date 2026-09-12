@@ -63,9 +63,15 @@ export function MessageInput({
     setFiles([]);
   };
 
-  /** Enter sends; Shift+Enter inserts a newline. */
+  /**
+   * Desktop keyboards use Enter to send and Shift+Enter for a newline. Touch
+   * keyboards do not expose Shift conveniently, so their Enter key keeps its
+   * native newline behaviour and the visible send button submits instead.
+   */
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (event.key === "Enter" && !event.shiftKey) {
+    const touchFirst = window.matchMedia("(pointer: coarse)").matches;
+
+    if (event.key === "Enter" && !event.shiftKey && !touchFirst) {
       event.preventDefault();
       submit();
     }
@@ -120,6 +126,7 @@ export function MessageInput({
           rows={1}
           autoFocus={autoFocus}
           disabled={disabled}
+          enterKeyHint={narrow ? "enter" : "send"}
           placeholder={narrow ? (narrowPlaceholder ?? placeholder) : placeholder}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={handleKeyDown}
