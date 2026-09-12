@@ -8,6 +8,7 @@ import { Sidebar } from "./sidebar/sidebar";
 import { SidebarToggle } from "./sidebar/sidebar-toggle";
 import { SearchModal } from "./sidebar/search-modal";
 import { MessageList } from "./message-list";
+import { DrawerDiagnostics } from "./drawer-diagnostics";
 import { MessageListSkeleton } from "./message-list-skeleton";
 import { EmptyState } from "./empty-state";
 import { ErrorNotice } from "./error-notice";
@@ -244,6 +245,8 @@ export function ChatView({ chatId }: { chatId?: string }) {
           )}
         </AnimatePresence>
       </motion.main>
+
+      <DrawerDiagnostics surfaceRef={mobileSurfaceRef} surfaceX={mobileSurfaceX} />
 
       <SearchModal
         open={searchOpen}
