@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Menu } from "lucide-react";
+import { AlignLeft } from "lucide-react";
 import { Sidebar } from "./sidebar/sidebar";
 import { SidebarToggle } from "./sidebar/sidebar-toggle";
 import { SearchModal } from "./sidebar/search-modal";
@@ -125,7 +125,7 @@ export function ChatView({ chatId }: { chatId?: string }) {
             onClick={() => setMenuOpen(true)}
             className="rounded-[var(--radius-sm)] p-2 text-ink-muted transition-colors hover:bg-white/[0.06] hover:text-ink md:hidden"
           >
-            <Menu size={19} strokeWidth={1.75} />
+            <AlignLeft size={21} strokeWidth={2.25} />
           </button>
 
           {/* Only reachable on desktop, where the rail is a permanent column. */}
