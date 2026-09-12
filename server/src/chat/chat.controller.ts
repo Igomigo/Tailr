@@ -4,6 +4,7 @@ import {
   chatIdParamSchema,
   createChatSchema,
   renameChatSchema,
+  searchChatsSchema,
   sendMessageSchema,
 } from "./chat.validation.js";
 import { AppError } from "../shared/errors.js";
@@ -25,6 +26,13 @@ export async function createChat(req: Request, res: Response): Promise<void> {
 export async function listChats(req: Request, res: Response): Promise<void> {
   const sessions = await chatService.listChatSessions(requireUserId(req));
   res.json({ success: true, sessions });
+}
+
+/** GET /chat/search — finds sessions by title or message content. */
+export async function searchChats(req: Request, res: Response): Promise<void> {
+  const { q } = searchChatsSchema.parse(req.query);
+  const results = await chatService.searchChatSessions(requireUserId(req), q);
+  res.json({ success: true, results });
 }
 
 /** GET /chat/:chatId — returns one session with its full message history. */

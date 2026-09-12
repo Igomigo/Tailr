@@ -13,6 +13,11 @@ export const createChatSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
 });
 
+/** Validates a search query. Capped because it is compiled into a regex. */
+export const searchChatsSchema = z.object({
+  q: z.string().trim().min(1, "Enter something to search for").max(100),
+});
+
 /**
  * Validates a chat message.
  *

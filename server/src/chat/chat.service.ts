@@ -49,6 +49,116 @@ export async function listChatSessions(userId: string): Promise<ChatSessionDocum
   return ChatSessionModel.find({ userId }).sort({ lastMessageAt: -1 }).limit(50);
 }
 
+/** Most matching conversations returned by one search. */
+const SEARCH_LIMIT = 30;
+
+/** Characters of surrounding text shown either side of a content match. */
+const SNIPPET_PADDING = 60;
+
+/** One conversation that matched a search, and why it matched. */
+export interface SessionSearchResult {
+  session: ChatSessionDocument;
+  /** The matching message text, when the title itself did not match. */
+  snippet: string | null;
+}
+
+/**
+ * Escapes a user's query for use inside a regex.
+ *
+ * Without this the query is a pattern rather than text: a stray bracket makes
+ * every search fail, and a crafted one such as `(a+)+$` backtracks long enough
+ * to hold the process, which is a denial of service from a single request.
+ */
+function escapeRegex(query: string): string {
+  return query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Takes the matching part of a message with a little text either side.
+ *
+ * A content match has to show the words it matched, or the result looks
+ * unrelated to what was typed and reads as a bug.
+ */
+function buildSnippet(content: string, query: string): string {
+  const at = content.toLowerCase().indexOf(query.toLowerCase());
+  if (at === -1) return content.slice(0, SNIPPET_PADDING * 2).trim();
+
+  const start = Math.max(0, at - SNIPPET_PADDING);
+  const end = Math.min(content.length, at + query.length + SNIPPET_PADDING);
+
+  return (
+    (start > 0 ? "…" : "") +
+    content.slice(start, end).trim() +
+    (end < content.length ? "…" : "")
+  );
+}
+
+/**
+ * Finds a user's conversations by title or message content.
+ *
+ * Messages carry no owner of their own, so they are searched within the set of
+ * sessions this user owns rather than matched first and attributed afterwards.
+ * Ownership is therefore a property of the query, not something inferred from
+ * a result.
+ *
+ * Title matches are returned before content matches: the title is what the
+ * user named the conversation, so a hit there is the stronger signal. Within
+ * each group the most recently active conversation comes first.
+ *
+ * @param userId - Owner whose conversations are searched.
+ * @param query - Text to look for, matched case-insensitively anywhere in the
+ *   title or a message.
+ */
+export async function searchChatSessions(
+  userId: string,
+  query: string,
+): Promise<SessionSearchResult[]> {
+  const pattern = new RegExp(escapeRegex(query), "i");
+
+  const owned = await ChatSessionModel.find({ userId })
+    .sort({ lastMessageAt: -1 })
+    .limit(200);
+
+  const titleMatches = owned.filter((session) => pattern.test(session.title));
+  const titleMatchIds = new Set(titleMatches.map((s) => String(s._id)));
+
+  // Only sessions that did not already match by title, so one conversation
+  // cannot appear twice. Tool messages are excluded: they carry raw JSON meant
+  // for the model, and a hit inside one points at text the user cannot see in
+  // their transcript.
+  const remaining = owned.filter((s) => !titleMatchIds.has(String(s._id)));
+
+  const contentMatches = remaining.length
+    ? await ChatMessageModel.find({
+        chatSessionId: { $in: remaining.map((s) => s._id) },
+        role: { $in: ["user", "assistant"] },
+        content: pattern,
+      })
+        .sort({ createdAt: -1 })
+        .limit(SEARCH_LIMIT * 4)
+    : [];
+
+  // Keeps the first match per conversation, which the sort above makes the
+  // most recent one.
+  const snippets = new Map<string, string>();
+  for (const message of contentMatches) {
+    const key = String(message.chatSessionId);
+    if (!snippets.has(key) && message.content) {
+      snippets.set(key, buildSnippet(message.content, query));
+    }
+  }
+
+  const byId = new Map(remaining.map((s) => [String(s._id), s]));
+
+  return [
+    ...titleMatches.map((session) => ({ session, snippet: null })),
+    ...[...snippets.entries()].flatMap(([id, snippet]) => {
+      const session = byId.get(id);
+      return session ? [{ session, snippet }] : [];
+    }),
+  ].slice(0, SEARCH_LIMIT);
+}
+
 /**
  * Loads a chat session the user owns.
  *

@@ -18,6 +18,14 @@ interface ModalProps {
   showClose?: boolean;
   /** Removes panel padding and background, for full-bleed content like images. */
   bare?: boolean;
+  /**
+   * Where the panel sits vertically.
+   *
+   * "top" is for panels whose height changes with their content, such as a
+   * list of search results: centred, they would drift up and down the screen
+   * as the list grew and shrank.
+   */
+  align?: "center" | "top";
 }
 
 const SIZES = {
@@ -43,6 +51,7 @@ export function Modal({
   size = "md",
   showClose = true,
   bare = false,
+  align = "center",
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -104,7 +113,12 @@ export function Modal({
           onClick={onClose}
           className="fixed inset-0 z-50 overflow-y-auto bg-[var(--color-canvas)]/80 backdrop-blur-2xl"
         >
-          <div className="flex min-h-full items-center justify-center p-4 sm:p-8">
+          <div
+            className={`
+              flex min-h-full justify-center p-4 sm:p-8
+              ${align === "top" ? "items-start pt-[12vh] sm:pt-[14vh]" : "items-center"}
+            `}
+          >
             <motion.div
               ref={panelRef}
               role="dialog"

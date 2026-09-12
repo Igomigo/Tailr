@@ -10,6 +10,8 @@ chatRouter.use(requireAuth);
 
 chatRouter.post("/", chatController.createChat);
 chatRouter.get("/", chatController.listChats);
+// Declared before "/:chatId", which would otherwise capture "search" as an id.
+chatRouter.get("/search", chatController.searchChats);
 chatRouter.get("/:chatId", chatController.getChat);
 chatRouter.patch("/:chatId", chatController.renameChat);
 chatRouter.delete("/:chatId", chatController.deleteChat);

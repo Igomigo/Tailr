@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { Menu } from "lucide-react";
 import { Sidebar } from "./sidebar/sidebar";
 import { SidebarToggle } from "./sidebar/sidebar-toggle";
+import { SearchModal } from "./sidebar/search-modal";
 import { MessageList } from "./message-list";
 import { MessageListSkeleton } from "./message-list-skeleton";
 import { EmptyState } from "./empty-state";
@@ -40,6 +41,21 @@ export function ChatView({ chatId }: { chatId?: string }) {
     setTitle,
   } = useSessions();
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Cmd/Ctrl-K opens search from anywhere on the screen, which is where every
+  // other app of this shape puts it.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const {
     messages,
@@ -95,6 +111,7 @@ export function ChatView({ chatId }: { chatId?: string }) {
         error={sessionsError}
         onRename={rename}
         onDelete={setPendingDelete}
+        onSearch={() => setSearchOpen(true)}
         collapsed={collapsed}
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -211,6 +228,12 @@ export function ChatView({ chatId }: { chatId?: string }) {
           )}
         </AnimatePresence>
       </main>
+
+      <SearchModal
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        sessions={sessions}
+      />
 
       <Modal
         open={Boolean(pendingDelete)}

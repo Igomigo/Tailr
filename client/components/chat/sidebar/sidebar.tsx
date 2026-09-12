@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { PenSquare, X } from "lucide-react";
+import { PenSquare, Search, X } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { SessionItem } from "./session-item";
 import { SessionListSkeleton } from "./session-list-skeleton";
@@ -19,6 +19,8 @@ interface SidebarProps {
   error?: string | null;
   onRename: (chatId: string, title: string) => Promise<void>;
   onDelete: (chatId: string) => void;
+  /** Opens the search palette. */
+  onSearch: () => void;
   /** Collapses the desktop rail. Has no effect on the mobile drawer. */
   collapsed: boolean;
   /** Controls the mobile drawer. */
@@ -43,7 +45,7 @@ function SessionList({
   onRename,
   onDelete,
   onNavigate,
-}: ContentProps) {
+}: Omit<ContentProps, "onSearch">) {
   if (error) {
     return (
       <p className="px-3 py-2 text-micro text-[var(--color-danger)]">{error}</p>
@@ -86,7 +88,7 @@ function SessionList({
 }
 
 /** Shared inner content, rendered in both the desktop rail and mobile drawer. */
-function SidebarContent({ onNavigate, ...list }: ContentProps) {
+function SidebarContent({ onNavigate, onSearch, ...list }: ContentProps) {
   return (
     <div className="flex h-full flex-col px-3 py-4">
       <div className="px-2 pb-4">
@@ -107,6 +109,27 @@ function SidebarContent({ onNavigate, ...list }: ContentProps) {
         <PenSquare size={15} strokeWidth={1.75} />
         New resume
       </Link>
+
+      {/*
+        Borderless, unlike the button above it: two outlined buttons stacked
+        read as a pair of equal choices, and starting a resume is the primary
+        one. The shortcut is shown rather than only bound, since a binding
+        nobody knows about goes unused.
+      */}
+      <button
+        type="button"
+        onClick={onSearch}
+        className="
+          mt-1 flex items-center gap-2.5 rounded-[var(--radius-sm)]
+          px-3 py-2.5 text-small text-ink-muted
+          transition-colors duration-150
+          hover:bg-white/[0.06] hover:text-ink
+        "
+      >
+        <Search size={15} strokeWidth={1.75} />
+        Search
+        <kbd className="ml-auto font-sans text-micro text-ink-faint">⌘K</kbd>
+      </button>
 
       <nav className="mt-1 flex-1 overflow-y-auto">
         <SessionList {...list} onNavigate={onNavigate} />

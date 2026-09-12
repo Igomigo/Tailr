@@ -22,4 +22,7 @@ export const queryKeys = {
    * no messages, which is the empty new-chat screen.
    */
   session: (chatId: string) => ["session", chatId] as const,
+
+  /** Search results for one query. */
+  sessionSearch: (query: string) => ["session-search", query] as const,
 } as const;

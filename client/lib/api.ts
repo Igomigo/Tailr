@@ -89,6 +89,23 @@ export async function listSessions(): Promise<ChatSession[]> {
   return sessions;
 }
 
+/** One conversation that matched a search, and why it matched. */
+export interface SessionSearchResult {
+  session: ChatSession;
+  /** The matching message text, when the title itself did not match. */
+  snippet: string | null;
+}
+
+/** Finds conversations by title or message content. */
+export async function searchSessions(
+  query: string,
+): Promise<SessionSearchResult[]> {
+  const { results } = await request<{ results: SessionSearchResult[] }>(
+    `/chat/search?q=${encodeURIComponent(query)}`,
+  );
+  return results;
+}
+
 /** Loads one session with its full message history. */
 export async function getSession(
   chatId: string,
