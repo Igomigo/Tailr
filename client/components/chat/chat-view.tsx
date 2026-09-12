@@ -34,10 +34,11 @@ export function ChatView({ chatId }: { chatId?: string }) {
     open: mobileDrawerOpen,
     dragging: mobileDrawerDragging,
     surfaceRaised: mobileSurfaceRaised,
+    surfaceRef: mobileSurfaceRef,
     surfaceX: mobileSurfaceX,
     openDrawer: openMobileDrawer,
     closeDrawer: closeMobileDrawer,
-    surfaceHandlers,
+    onSurfaceClickCapture,
   } = useMobileDrawer();
   const { collapsed, toggle } = useSidebar();
   const {
@@ -126,10 +127,11 @@ export function ChatView({ chatId }: { chatId?: string }) {
       />
 
       <motion.main
+        ref={mobileSurfaceRef}
         data-mobile-drawer={mobileSurfaceRaised}
         data-drawer-dragging={mobileDrawerDragging}
         style={{ x: mobileSurfaceX, touchAction: "pan-y" }}
-        {...surfaceHandlers}
+        onClickCapture={onSurfaceClickCapture}
         className="chat-surface relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-canvas)]"
       >
         <header className="flex h-14 shrink-0 items-center gap-2 px-3 sm:px-4">

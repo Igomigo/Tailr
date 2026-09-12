@@ -258,6 +258,11 @@ body {
  */
 @media (max-width: 767px) {
   .chat-surface {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    width: 100%;
+    overscroll-behavior: none;
     will-change: transform;
     transition:
       background-color 160ms ease,
@@ -271,8 +276,8 @@ body {
       var(--color-canvas),
       var(--color-ink) 10%
     );
-    border-bottom-left-radius: 2rem;
-    border-top-left-radius: 2rem;
+    border-bottom-left-radius: 2.5rem;
+    border-top-left-radius: 2.5rem;
     box-shadow: -18px 0 42px rgba(0, 0, 0, 0.34);
   }
 
