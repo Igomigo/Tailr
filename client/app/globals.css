@@ -282,14 +282,10 @@ body {
   }
 
   /* Once horizontal intent wins, the conversation is one rigid x-axis layer.
-     The transcript cannot continue scrolling underneath a circular finger
-     path and make that layer appear to drift vertically. */
+     Native scrolling is cancelled by the gesture handler; the transcript's
+     overflow stays unchanged so the browser does not cancel the active touch. */
   .chat-surface[data-drawer-dragging="true"] {
     user-select: none;
-  }
-
-  .chat-surface[data-drawer-dragging="true"] [data-chat-scroll] {
-    overflow-y: hidden;
   }
 }
 

@@ -228,19 +228,18 @@ export function useMobileDrawer() {
 
       const velocityIsRecent =
         performance.now() - gesture.lastAt <= RECENT_VELOCITY_WINDOW_MS;
-      const velocity =
-        cancelled || !velocityIsRecent ? 0 : gesture.velocityX;
+      const velocity = !velocityIsRecent ? 0 : gesture.velocityX;
       const position = surfaceX.get();
       const directionalTravel = position - gesture.lockOffset;
 
       let shouldOpen: boolean;
-      if (cancelled) {
-        shouldOpen = gesture.startedOpen;
-      } else if (Math.abs(directionalTravel) >= DIRECTIONAL_SETTLE_PX) {
+      if (Math.abs(directionalTravel) >= DIRECTIONAL_SETTLE_PX) {
         // Once a deliberate horizontal drag has a clear direction, honour it.
-        // This is more predictable than letting a curved path's average speed
-        // unexpectedly fling the surface back where it started.
+        // This also lets an interrupted browser gesture finish naturally from
+        // the movement already made instead of jumping back to its origin.
         shouldOpen = directionalTravel > 0;
+      } else if (cancelled) {
+        shouldOpen = gesture.startedOpen;
       } else {
         shouldOpen =
           velocity > FLING_VELOCITY_PX_PER_MS ||
@@ -279,12 +278,22 @@ export function useMobileDrawer() {
 
   const onSurfaceClickCapture = useCallback(
     (event: ReactMouseEvent<HTMLElement>): void => {
-      if (!suppressClickRef.current) return;
-      suppressClickRef.current = false;
-      event.preventDefault();
-      event.stopPropagation();
+      if (suppressClickRef.current) {
+        suppressClickRef.current = false;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
+      // The shifted conversation is the drawer's dismiss surface. Capture the
+      // tap so controls underneath it do not also activate while it closes.
+      if (open) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeDrawer();
+      }
     },
-    [],
+    [closeDrawer, open],
   );
 
   return {
