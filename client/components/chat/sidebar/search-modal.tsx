@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Search, MessageSquare } from "lucide-react";
@@ -80,7 +80,6 @@ export function SearchModal({ open, onClose, sessions }: SearchModalProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
   const trimmed = query.trim();
@@ -110,14 +109,6 @@ export function SearchModal({ open, onClose, sessions }: SearchModalProps) {
   // keystroke, and an effect would correct the highlight one render after the
   // rows beneath it had already moved.
   const active = selected < results.length ? selected : 0;
-
-  useEffect(() => {
-    if (!open) return;
-
-    // Waits a frame so the field exists before focus moves to it.
-    const frame = requestAnimationFrame(() => inputRef.current?.focus());
-    return () => cancelAnimationFrame(frame);
-  }, [open]);
 
   /** Clears the field on the way out, so the palette opens fresh next time. */
   const close = (): void => {
@@ -157,7 +148,7 @@ export function SearchModal({ open, onClose, sessions }: SearchModalProps) {
   const searching = Boolean(trimmed) && (isFetching || debounced !== trimmed);
 
   return (
-    <Modal open={open} onClose={close} size="md" align="top" showClose={false}>
+    <Modal open={open} onClose={close} size="wide" align="top">
       <div className="-m-6">
         <div className="flex items-center gap-3 border-b border-[var(--color-line)] px-5">
           <Search
@@ -166,15 +157,19 @@ export function SearchModal({ open, onClose, sessions }: SearchModalProps) {
             className="shrink-0 text-ink-faint"
           />
           <input
-            ref={inputRef}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search conversations"
             aria-label="Search conversations"
+            /*
+              No focus treatment of its own: the field is focused the moment
+              the palette opens and holds a cursor, so there is nothing left to
+              indicate.
+            */
             className="
               w-full bg-transparent py-4 text-body text-ink
-              placeholder:text-ink-faint focus:outline-none
+              outline-none placeholder:text-ink-faint
             "
           />
         </div>

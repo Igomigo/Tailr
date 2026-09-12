@@ -126,14 +126,16 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Keyboard focus is visible on interactive elements only. Applying this
-   globally would draw a square outline around unstyled wrappers such as the
-   message input's form, which has no radius of its own. */
-a:focus-visible,
-button:focus-visible,
-[role="button"]:focus-visible,
-input:focus-visible,
-select:focus-visible {
+/* Keyboard focus for controls that have no focus styling of their own —
+   buttons and links, whose appearance is otherwise unchanged when tabbed to.
+
+   Text fields are deliberately absent. Every one in the app draws its own
+   focus, brightening its border and background (see Field, MessageInput, the
+   sidebar's rename field), so an outline here only fought that styling, and
+   its 2px offset stood a rectangle off the edge of whatever it landed on. A
+   field that wants a ring asks for one; it does not need to opt out of a rule
+   it never wanted. */
+:is(a, button, [role="button"]):focus-visible {
   outline: 2px solid var(--color-line-strong);
   outline-offset: 2px;
 }

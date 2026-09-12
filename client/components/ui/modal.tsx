@@ -13,7 +13,7 @@ interface ModalProps {
   description?: string;
   children: ReactNode;
   /** Widens the panel for content that needs the room, such as a document. */
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "wide" | "lg";
   /** Hides the close button for panels that supply their own. */
   showClose?: boolean;
   /** Removes panel padding and background, for full-bleed content like images. */
@@ -31,6 +31,8 @@ interface ModalProps {
 const SIZES = {
   sm: "max-w-sm",
   md: "max-w-lg",
+  /** For a panel that lists things, where a narrow column wastes the screen. */
+  wide: "max-w-3xl",
   lg: "max-w-[46rem]",
 } as const;
 
@@ -55,6 +57,17 @@ export function Modal({
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // Held in a ref so the effect below can depend on `open` alone. Callers
+  // routinely pass an inline arrow, which is a new function every render; with
+  // `onClose` in the dependencies the effect tore down and re-ran on each one,
+  // and its cleanup restores focus to whatever was focused before the dialog
+  // opened. In a dialog that re-renders as you type — a search field — that
+  // pulled focus out of the input after every character.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) return;
 
@@ -62,7 +75,7 @@ export function Modal({
 
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -91,8 +104,16 @@ export function Modal({
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    // Waits a frame so the panel exists before focus moves into it.
-    const frame = requestAnimationFrame(() => panelRef.current?.focus());
+    // Waits a frame so the panel exists before focus moves into it. A field
+    // inside the panel is focused in preference to the panel itself: a dialog
+    // built around an input should be ready to type into, and focusing the
+    // wrapper would mean the first keystroke went nowhere.
+    const frame = requestAnimationFrame(() => {
+      const field = panelRef.current?.querySelector<HTMLElement>(
+        "input:not([disabled]), textarea:not([disabled])",
+      );
+      (field ?? panelRef.current)?.focus();
+    });
 
     return () => {
       document.removeEventListener("keydown", onKeyDown);
@@ -100,7 +121,7 @@ export function Modal({
       cancelAnimationFrame(frame);
       previouslyFocused?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return (
     <AnimatePresence>
@@ -155,15 +176,22 @@ export function Modal({
           </div>
 
           {showClose && (
+            /*
+              Grey until pointed at, and without a border or shadow of its own.
+              Dismissing is not the action the dialog is for, so the control is
+              legible without competing with the content; hovering brightens
+              the mark and fills the circle behind it, which is what tells you
+              it is a button at all.
+            */
             <button
               type="button"
               aria-label="Close"
               onClick={onClose}
               className="
-                fixed right-4 top-4 z-10 rounded-full
-                border border-white/15 bg-[var(--color-overlay)]
-                p-2.5 text-ink shadow-lg
-                transition-colors duration-150 hover:bg-white/[0.14]
+                fixed right-4 top-4 z-10 rounded-full p-2.5
+                text-ink-muted
+                transition-colors duration-150
+                hover:bg-white/[0.09] hover:text-ink
                 sm:right-6 sm:top-6
               "
             >
