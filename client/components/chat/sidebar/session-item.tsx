@@ -6,6 +6,7 @@ import {
   useState,
   type CSSProperties,
   type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
@@ -26,6 +27,8 @@ const REVEAL_GAP_PX = 2;
 const FADE_REVEAL_PX = 16;
 /** Reading pace for a title reveal, independent of title length. */
 const SCROLL_SPEED_PX_PER_SECOND = 30;
+const LONG_PRESS_DELAY_MS = 500;
+const LONG_PRESS_MOVE_TOLERANCE_PX = 10;
 
 interface SessionItemProps {
   id: string;
@@ -60,7 +63,11 @@ export function SessionItem({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
   const [hovered, setHovered] = useState(false);
+  const [pressing, setPressing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressStartRef = useRef<{ x: number; y: number } | null>(null);
+  const longPressTriggeredRef = useRef(false);
 
   // How far the title runs past the row: the text's natural width against the
   // width available to it. Two elements are involved because neither number
@@ -110,6 +117,50 @@ export function SessionItem({
   useEffect(() => {
     if (editing) inputRef.current?.select();
   }, [editing]);
+
+  useEffect(
+    () => () => {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    },
+    [],
+  );
+
+  const cancelLongPress = (): void => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = null;
+    longPressStartRef.current = null;
+    setPressing(false);
+  };
+
+  const handleTouchPointerDown = (
+    event: ReactPointerEvent<HTMLLIElement>,
+  ): void => {
+    if (event.pointerType !== "touch") return;
+
+    longPressTriggeredRef.current = false;
+    longPressStartRef.current = { x: event.clientX, y: event.clientY };
+    setPressing(true);
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      longPressTimerRef.current = null;
+      setPressing(false);
+      setMenuOpen(true);
+    }, LONG_PRESS_DELAY_MS);
+  };
+
+  const handleTouchPointerMove = (
+    event: ReactPointerEvent<HTMLLIElement>,
+  ): void => {
+    const start = longPressStartRef.current;
+    if (!start || event.pointerType !== "touch") return;
+
+    if (
+      Math.hypot(event.clientX - start.x, event.clientY - start.y) >
+      LONG_PRESS_MOVE_TOLERANCE_PX
+    ) {
+      cancelLongPress();
+    }
+  };
 
   const commit = async (): Promise<void> => {
     const next = draft.trim();
@@ -168,20 +219,37 @@ export function SessionItem({
 
   return (
     <li
+      data-pressing={pressing}
       className="group/item relative"
       onMouseEnter={handleEnter}
       onMouseLeave={() => setHovered(false)}
+      onPointerDown={handleTouchPointerDown}
+      onPointerMove={handleTouchPointerMove}
+      onPointerUp={cancelLongPress}
+      onPointerCancel={cancelLongPress}
+      onContextMenu={(event) => {
+        if (longPressTriggeredRef.current) event.preventDefault();
+      }}
     >
       <Link
         href={`/chat/${id}`}
-        onClick={onNavigate}
+        onClick={(event) => {
+          if (longPressTriggeredRef.current) {
+            event.preventDefault();
+            longPressTriggeredRef.current = false;
+            return;
+          }
+          onNavigate?.();
+        }}
         data-active={active}
         className="
-          block overflow-hidden rounded-[var(--radius-sm)] px-1 py-2
-          text-small text-ink-muted
+          block overflow-hidden rounded-[var(--radius-sm)] px-3 py-3.5
+          text-[1rem] leading-6 text-ink-muted
           transition-colors duration-150
           hover:bg-white/[0.08] hover:text-ink
+          data-[pressing=true]:bg-white/[0.08]
           data-[active=true]:bg-white/[0.11] data-[active=true]:text-ink
+          md:px-1 md:py-2 md:text-small
         "
       >
         {/*
@@ -264,6 +332,7 @@ export function SessionItem({
         }
         className="
           title-cover
+          hidden md:block
           pointer-events-none absolute right-0 top-1/2 h-8 w-16 -translate-y-1/2
           rounded-r-[var(--radius-sm)]
           transition-opacity duration-150
@@ -284,8 +353,10 @@ export function SessionItem({
           absolute right-1 top-1/2 -translate-y-1/2 rounded-[6px] p-2.5
           text-ink
           transition-opacity duration-150
+          max-md:pointer-events-none max-md:opacity-0
           focus-visible:opacity-100
-          data-[open=true]:opacity-100
+          focus-visible:max-md:pointer-events-auto
+          md:data-[open=true]:opacity-100
           [@media(hover:hover)]:p-1.5
           [@media(hover:hover)]:opacity-0
           [@media(hover:hover)]:group-hover/item:opacity-100

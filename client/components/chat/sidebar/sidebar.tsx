@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { PenSquare, Search, X } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { SessionItem } from "./session-item";
@@ -23,7 +23,7 @@ interface SidebarProps {
   onSearch: () => void;
   /** Collapses the desktop rail. Has no effect on the mobile drawer. */
   collapsed: boolean;
-  /** Controls the mobile drawer. */
+  /** Whether the chat surface has revealed the mobile drawer. */
   open: boolean;
   onClose: () => void;
 }
@@ -70,7 +70,7 @@ function SessionList({
       <p className="px-1 pb-1.5 pt-4 text-micro uppercase tracking-[0.12em] text-ink-faint">
         Recent
       </p>
-      <ul className="flex flex-col gap-0.5">
+      <ul className="flex flex-col gap-1.5 md:gap-0.5">
         {sessions.map((session) => (
           <SessionItem
             key={session._id}
@@ -118,7 +118,10 @@ function SidebarContent({ onNavigate, onSearch, ...list }: ContentProps) {
       */}
       <button
         type="button"
-        onClick={onSearch}
+        onClick={() => {
+          onSearch();
+          onNavigate?.();
+        }}
         className="
           mt-1 flex items-center gap-2.5 rounded-[var(--radius-sm)]
           px-3 py-2.5 text-small text-ink-muted
@@ -145,8 +148,9 @@ function SidebarContent({ onNavigate, onSearch, ...list }: ContentProps) {
 /**
  * Conversation navigation.
  *
- * A fixed rail on desktop, and a drawer over the conversation on mobile where
- * the screen cannot afford a permanent column.
+ * A fixed rail on desktop. On mobile it is the layer beneath the conversation:
+ * ChatView moves the conversation aside to reveal this rather than mounting an
+ * overlay drawer above it.
  */
 export function Sidebar({
   collapsed,
@@ -172,37 +176,20 @@ export function Sidebar({
         </div>
       </motion.aside>
 
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={transition.fast}
-              onClick={onClose}
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
-            />
-            <motion.aside
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={transition.base}
-              className="fixed inset-y-0 left-0 z-50 w-72 border-r border-[var(--color-line)] bg-[var(--color-rail)] md:hidden"
-            >
-              <button
-                type="button"
-                aria-label="Close menu"
-                onClick={onClose}
-                className="absolute right-3 top-4 rounded-full p-1.5 text-ink-faint transition-colors hover:bg-white/[0.07] hover:text-ink"
-              >
-                <X size={17} strokeWidth={1.75} />
-              </button>
-              <SidebarContent {...content} onNavigate={onClose} />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+      <aside
+        aria-hidden={!open}
+        className="fixed inset-y-0 left-0 z-0 w-[80vw] bg-[var(--color-rail)] md:hidden"
+      >
+        <button
+          type="button"
+          aria-label="Close menu"
+          onClick={onClose}
+          className="absolute right-3 top-4 rounded-full p-1.5 text-ink-faint transition-colors hover:bg-white/[0.07] hover:text-ink"
+        >
+          <X size={17} strokeWidth={1.75} />
+        </button>
+        <SidebarContent {...content} onNavigate={onClose} />
+      </aside>
     </>
   );
 }

@@ -251,6 +251,32 @@ body {
   background-size: 60vw 100%;
 }
 
+/*
+ * On compact screens the conversation is a movable surface over the sidebar.
+ * The radius, quiet lift, and shadow appear only once it begins to move, so
+ * the exposed edge reads as a real layer rather than an overlay drawer.
+ */
+@media (max-width: 767px) {
+  .chat-surface {
+    will-change: transform;
+    transition:
+      background-color 160ms ease,
+      box-shadow 160ms ease,
+      border-radius 160ms ease;
+  }
+
+  .chat-surface[data-mobile-drawer="true"] {
+    background-color: color-mix(
+      in srgb,
+      var(--color-canvas),
+      var(--color-surface) 48%
+    );
+    border-bottom-left-radius: 1.25rem;
+    border-top-left-radius: 1.25rem;
+    box-shadow: -14px 0 34px rgba(0, 0, 0, 0.28);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
