@@ -29,6 +29,7 @@ export const sendMessageSchema = (hasFiles = false) =>
     message: hasFiles
       ? z.string().trim().max(20_000).optional().default("")
       : z.string().trim().min(1, "Message cannot be empty").max(20_000),
+    clientMessageId: z.string().uuid().optional(),
   });
 
 export type CreateChatInput = z.infer<typeof createChatSchema>;

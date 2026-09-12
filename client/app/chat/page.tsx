@@ -1,6 +1,4 @@
-import { ChatView } from "@/components/chat/chat-view";
-
-/** A new conversation. The session is created when the first message is sent. */
+/** The shared chat layout renders the new-conversation screen. */
 export default function NewChatPage() {
-  return <ChatView />;
+  return null;
 }

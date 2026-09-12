@@ -69,13 +69,14 @@ export async function deleteChat(req: Request, res: Response): Promise<void> {
 export async function sendMessage(req: Request, res: Response): Promise<void> {
   const { chatId } = chatIdParamSchema.parse(req.params);
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
-  const { message } = sendMessageSchema(files.length > 0).parse(req.body ?? {});
+  const { message, clientMessageId } = sendMessageSchema(files.length > 0).parse(req.body ?? {});
 
   const { messages } = await chatService.handleUserMessage(
     chatId,
     requireUserId(req),
     message,
     files,
+    clientMessageId,
   );
   res.status(201).json({ success: true, messages });
 }
@@ -90,7 +91,7 @@ export async function sendMessage(req: Request, res: Response): Promise<void> {
 export async function streamMessage(req: Request, res: Response): Promise<void> {
   const { chatId } = chatIdParamSchema.parse(req.params);
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
-  const { message } = sendMessageSchema(files.length > 0).parse(req.body ?? {});
+  const { message, clientMessageId } = sendMessageSchema(files.length > 0).parse(req.body ?? {});
   const userId = requireUserId(req);
 
   res.writeHead(200, {
@@ -111,6 +112,7 @@ export async function streamMessage(req: Request, res: Response): Promise<void> 
       userId,
       message,
       files,
+      clientMessageId,
     )) {
       send(event);
     }

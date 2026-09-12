@@ -58,7 +58,7 @@ export function MessageList({
         {messages.map((message) =>
           message.role === "user" ? (
             <UserMessage
-              key={message._id}
+              key={message.clientMessageId ?? message._id}
               content={message.content ?? ""}
               attachments={message.attachments}
             />

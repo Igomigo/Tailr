@@ -24,6 +24,9 @@ const chatMessageSchema = new Schema(
 
     role: { type: String, enum: MESSAGE_ROLES, required: true },
 
+    /** Links a browser's optimistic user message to this persisted message. */
+    clientMessageId: { type: String, default: undefined },
+
     /** Null on an assistant message that only requests tool calls. */
     content: { type: String, default: null },
 

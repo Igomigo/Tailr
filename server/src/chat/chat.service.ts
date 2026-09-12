@@ -324,6 +324,7 @@ export async function handleUserMessage(
   userId: string,
   message: string,
   files: IncomingFile[] = [],
+  clientMessageId?: string,
 ): Promise<{ session: ChatSessionDocument; messages: ChatMessageDocument[] }> {
   const session = await getChatSession(chatId, userId);
 
@@ -335,6 +336,7 @@ export async function handleUserMessage(
     chatSessionId: session._id,
     role: "user",
     content: message,
+    ...(clientMessageId ? { clientMessageId } : {}),
     ...(uploadedFiles.length
       ? {
           attachments: uploadedFiles.map((file) => ({
@@ -502,6 +504,7 @@ export async function* streamUserMessage(
   userId: string,
   message: string,
   files: IncomingFile[] = [],
+  clientMessageId?: string,
 ): AsyncGenerator<ChatStreamEvent> {
   const session = await getChatSession(chatId, userId);
 
@@ -513,6 +516,7 @@ export async function* streamUserMessage(
     chatSessionId: session._id,
     role: "user",
     content: message,
+    ...(clientMessageId ? { clientMessageId } : {}),
     ...(uploadedFiles.length
       ? {
           attachments: uploadedFiles.map((file) => ({

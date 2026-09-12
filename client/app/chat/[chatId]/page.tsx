@@ -1,11 +1,4 @@
-import { ChatView } from "@/components/chat/chat-view";
-
-/** An existing conversation, loaded from its id in the URL. */
-export default async function ChatPage({
-  params,
-}: {
-  params: Promise<{ chatId: string }>;
-}) {
-  const { chatId } = await params;
-  return <ChatView chatId={chatId} />;
+/** The shared chat layout reads the route id and renders the conversation. */
+export default function ChatPage() {
+  return null;
 }

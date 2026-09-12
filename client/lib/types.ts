@@ -12,6 +12,8 @@ export interface Attachment {
 
 export interface ChatMessage {
   _id: string;
+  /** Browser-generated id linking an optimistic user message to its saved copy. */
+  clientMessageId?: string;
   chatSessionId: string;
   role: MessageRole;
   content: string | null;

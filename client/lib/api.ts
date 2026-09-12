@@ -148,10 +148,12 @@ export async function* streamMessage(
   chatId: string,
   message: string,
   files: File[] = [],
+  clientMessageId?: string,
   signal?: AbortSignal,
 ): AsyncGenerator<ChatStreamEvent> {
   const body = new FormData();
   body.append("message", message);
+  if (clientMessageId) body.append("clientMessageId", clientMessageId);
   files.forEach((file) => body.append("files", file));
 
   const response = await fetch(`${API_URL}/chat/${chatId}/message/stream`, {

@@ -26,13 +26,6 @@ interface UseChatOptions {
    * so the list can be extended without refetching it.
    */
   onSessionCreated?: (session: ChatSession) => void;
-  /**
-   * Called once the turn is over, to move the route to the new conversation.
-   *
-   * Kept separate from `onSessionCreated` because navigating remounts this
-   * hook, which would cut off a stream still in progress.
-   */
-  onSessionReady?: (chatId: string) => void;
   /** Called when the assistant names the conversation, on its first turn. */
   onTitle?: (chatId: string, title: string) => void;
 }
@@ -47,13 +40,13 @@ interface UseChatOptions {
 export function useChat({
   chatId,
   onSessionCreated,
-  onSessionReady,
   onTitle,
 }: UseChatOptions = {}) {
   const [streamingText, setStreamingText] = useState("");
   const [status, setStatus] = useState<ChatStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [handoffChatId, setHandoffChatId] = useState<string>();
 
   const sessionIdRef = useRef<string | undefined>(chatId);
   const abortRef = useRef<AbortController | null>(null);
@@ -73,8 +66,16 @@ export function useChat({
     messages: ChatMessage[];
   }>({ chatId, messages: [] });
 
+  // A new session is assigned its id before the router has applied the new
+  // URL. Keep its optimistic turn visible during that tiny handoff; once the
+  // URL changes, the ordinary id comparison takes over.
   const localMessages =
-    pendingTurn.chatId === chatId ? pendingTurn.messages : EMPTY_MESSAGES;
+    pendingTurn.chatId === chatId ||
+    (!chatId &&
+      status !== "idle" &&
+      pendingTurn.chatId === handoffChatId)
+      ? pendingTurn.messages
+      : EMPTY_MESSAGES;
 
   /** Updates this visit's messages, keeping them tied to the open chat. */
   const setLocalMessages = useCallback(
@@ -115,8 +116,20 @@ export function useChat({
   const messages = useMemo(() => {
     // Tool messages carry raw JSON meant for the model, not the user. The
     // document URL they produce surfaces on the assistant message that follows.
+    const localClientMessageIds = new Set(
+      localMessages.flatMap((message) =>
+        message.clientMessageId ? [message.clientMessageId] : [],
+      ),
+    );
     const saved =
-      history?.messages.filter((message) => message.role !== "tool") ?? [];
+      history?.messages.filter(
+        (message) =>
+          message.role !== "tool" &&
+          !(
+            message.clientMessageId &&
+            localClientMessageIds.has(message.clientMessageId)
+          ),
+      ) ?? [];
 
     // A refetch after a turn returns the messages that turn just added, which
     // are still held locally too. Showing whichever the server has and keeping
@@ -129,7 +142,9 @@ export function useChat({
     return [...saved, ...pending];
   }, [history, localMessages]);
 
-  const loading = Boolean(chatId) && isPending;
+  // The new session's first turn is already on screen optimistically. Do not
+  // replace it with a skeleton while its just-created history is fetched.
+  const loading = Boolean(chatId) && isPending && localMessages.length === 0;
 
   const send = useCallback(
     async (text: string, files: File[] = []): Promise<void> => {
@@ -140,8 +155,10 @@ export function useChat({
       lastAttemptRef.current = { text, files };
 
       // Shown immediately so the conversation responds before the network does.
+      const clientMessageId = crypto.randomUUID();
       const optimistic: ChatMessage = {
-        _id: `pending-${Date.now()}`,
+        _id: `pending-${clientMessageId}`,
+        clientMessageId,
         chatSessionId: sessionIdRef.current ?? "",
         role: "user",
         content: text,
@@ -160,20 +177,23 @@ export function useChat({
       const controller = new AbortController();
       abortRef.current = controller;
 
-      // Declared outside the try so the finally block can announce a newly
-      // created session after the stream has finished.
       let id = sessionIdRef.current;
-      let createdId: string | null = null;
 
       try {
         if (!id) {
           const session = await api.createSession();
           id = session._id;
           sessionIdRef.current = id;
-          // Shown in the sidebar straight away, so a title generated during
-          // this stream has a row to land on. Navigation waits until the
-          // stream is done, since it would remount this hook and cut it off.
-          createdId = id;
+          // The optimistic first turn was created before the session had an
+          // id. Move it to the new session before the URL changes, so it
+          // survives the handoff from /chat to /chat/:chatId.
+          setPendingTurn((current) => ({
+            chatId: id,
+            messages: current.messages,
+          }));
+          setHandoffChatId(id);
+          // The chat shell lives in the shared route layout, so this route
+          // change updates the URL without unmounting the active stream.
           onSessionCreated?.(session);
         }
 
@@ -183,14 +203,14 @@ export function useChat({
           id,
           text,
           files,
+          clientMessageId,
           controller.signal,
         )) {
           switch (event.type) {
             case "user-message":
-              // Take the server's fields but keep the id already on screen.
-              // React lists are keyed by id, so swapping it would unmount the
-              // message and mount a new one, making it blink out and back for
-              // a message that never actually changed.
+              // Keep the optimistic id as the rendering identity. The shared
+              // client id suppresses this message's saved copy from history,
+              // so confirmation updates this bubble instead of replacing it.
               setLocalMessages((current) =>
                 current.map((message) =>
                   message._id === optimistic._id
@@ -257,13 +277,9 @@ export function useChat({
         setStatus("idle");
         setStreamingText("");
         abortRef.current = null;
-
-        // Announced only once the turn is over. The route change this triggers
-        // remounts the hook, which would abort a stream still in progress.
-        if (createdId) onSessionReady?.(createdId);
       }
     },
-    [onSessionCreated, onSessionReady, onTitle, setLocalMessages],
+    [onSessionCreated, onTitle, setLocalMessages],
   );
 
   /** Stops an in-flight response. */
