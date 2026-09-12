@@ -21,11 +21,19 @@ export function DrawerDiagnostics({ surfaceRef, surfaceX }: {
     if (!enabled || !surface) return;
     const started = performance.now();
     let tracking = false;
+    let pointerId: number | null = null;
     const record = (event: string, detail = "") => {
       entries.current.push(`${Math.round(performance.now() - started)}ms ${event} x=${surfaceX.get().toFixed(1)} drag=${surface.dataset.drawerDragging} ${detail}`);
       if (entries.current.length > 600) entries.current.shift();
     };
     record("enabled", `viewport=${window.innerWidth}x${window.innerHeight}`);
+    const onPointer = (event: PointerEvent) => {
+      if (event.type === "pointerdown" && event.isPrimary && event.target instanceof Node && surface.contains(event.target)) {
+        pointerId = event.pointerId;
+      }
+      if (event.pointerId !== pointerId) return;
+      record(event.type, `id=${event.pointerId} captured=${surface.hasPointerCapture(event.pointerId)} finger=${Math.round(event.clientX)},${Math.round(event.clientY)}`);
+    };
     const onTouch = (event: TouchEvent) => {
       if (event.type === "touchstart") {
         tracking = event.target instanceof Node && surface.contains(event.target);
@@ -48,12 +56,15 @@ export function DrawerDiagnostics({ surfaceRef, surfaceX }: {
     const unsubscribe = surfaceX.on("change", () => record("position"));
     // Passive observers run after the drawer's listener and never cancel a touch.
     const types = ["touchstart", "touchmove", "touchend", "touchcancel"] as const;
+    const pointerTypes = ["pointerdown", "pointermove", "pointerup", "pointercancel", "gotpointercapture", "lostpointercapture"] as const;
+    pointerTypes.forEach(type => window.addEventListener(type, onPointer, { capture: true, passive: true }));
     types.forEach(type => document.addEventListener(type, onTouch, { passive: true }));
     document.addEventListener("scroll", onScroll, { capture: true, passive: true });
     window.addEventListener("resize", onResize);
     window.visualViewport?.addEventListener("resize", onResize);
     return () => {
       unsubscribe();
+      pointerTypes.forEach(type => window.removeEventListener(type, onPointer, true));
       types.forEach(type => document.removeEventListener(type, onTouch));
       document.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onResize);

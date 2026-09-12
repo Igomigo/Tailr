@@ -13,17 +13,14 @@ import { animate, useMotionValue } from "motion/react";
 const DRAWER_WIDTH_RATIO = 0.8;
 const MOBILE_BREAKPOINT_PX = 768;
 const DIRECTION_THRESHOLD_PX = 8;
-/** Vertical travel must clearly dominate before it wins over a diagonal swipe. */
-const VERTICAL_DOMINANCE = 1.5;
 const OPEN_POSITION_RATIO = 0.42;
 const FLING_VELOCITY_PX_PER_MS = 0.45;
 const RECENT_VELOCITY_WINDOW_MS = 100;
 const DIRECTIONAL_SETTLE_PX = 4;
 
 interface DrawerGesture {
-  touchId: number;
+  pointerId: number;
   startX: number;
-  startY: number;
   startOffset: number;
   lockOffset: number;
   startedOpen: boolean;
@@ -41,20 +38,11 @@ function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(Math.max(value, minimum), maximum);
 }
 
-function findTouch(touches: TouchList, id: number): Touch | null {
-  for (let index = 0; index < touches.length; index += 1) {
-    const touch = touches.item(index);
-    if (touch?.identifier === id) return touch;
-  }
-  return null;
-}
-
 /**
  * Controls the fixed mobile conversation surface above the sidebar.
  *
- * The first few pixels establish intent. Clearly vertical movement remains a
- * native transcript scroll. A rightward diagonal is deliberately biased toward
- * the drawer; once claimed, native scrolling is cancelled and only x changes.
+ * CSS pan-y gives vertical scrolling to the browser. Pointer capture keeps a
+ * horizontal drag attached to this surface, with explicit cancellation cleanup.
  */
 export function useMobileDrawer() {
   const [open, setOpen] = useState(false);
@@ -66,10 +54,12 @@ export function useMobileDrawer() {
   const suppressClickRef = useRef(false);
   const animationRunRef = useRef(0);
   const settlingRef = useRef(false);
+  const openRef = useRef(false);
 
   const settle = useCallback(
     (nextOpen: boolean): void => {
       const animationRun = ++animationRunRef.current;
+      openRef.current = nextOpen;
       setOpen(nextOpen);
       setDragging(false);
       if (nextOpen) setSurfaceRaised(true);
@@ -101,7 +91,11 @@ export function useMobileDrawer() {
   // Keep an open surface aligned after rotation, and reset this mobile-only
   // interaction if the viewport crosses into the desktop layout.
   useEffect(() => {
+    let width = window.innerWidth;
     const onResize = (): void => {
+      // Mobile browser chrome/keyboard height changes are not drawer resizes.
+      if (window.innerWidth === width) return;
+      width = window.innerWidth;
       if (window.innerWidth >= MOBILE_BREAKPOINT_PX) {
         ++animationRunRef.current;
         settlingRef.current = false;
@@ -109,83 +103,67 @@ export function useMobileDrawer() {
         surfaceX.stop();
         surfaceX.set(0);
         setOpen(false);
+        openRef.current = false;
         setDragging(false);
         setSurfaceRaised(false);
         return;
       }
 
-      if (open) surfaceX.set(drawerWidth());
+      if (!gestureRef.current && openRef.current) surfaceX.set(drawerWidth());
     };
 
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [open, surfaceX]);
+  }, [surfaceX]);
 
   useEffect(() => {
     const surface = surfaceRef.current;
     if (!surface) return;
 
-    const onTouchStart = (event: TouchEvent): void => {
-      if (event.touches.length !== 1) return;
+    const onPointerDown = (event: PointerEvent): void => {
+      if (window.innerWidth >= MOBILE_BREAKPOINT_PX || event.pointerType !== "touch" || !event.isPrimary) return;
+      suppressClickRef.current = false;
 
       // Editable fields and controls keep their native touch behaviour. The
       // surrounding header and transcript surface remain draggable.
-      const target = event.target as HTMLElement;
+      const target = event.target;
       if (
-        target.closest(
+        !openRef.current && target instanceof Element && target.closest(
           "textarea, input, select, button, [contenteditable=true]",
         )
       ) {
         return;
       }
 
-      const touch = event.touches.item(0);
-      if (!touch) return;
-
       const now = performance.now();
       const offset = surfaceX.get();
       gestureRef.current = {
-        touchId: touch.identifier,
-        startX: touch.clientX,
-        startY: touch.clientY,
+        pointerId: event.pointerId,
+        startX: event.clientX,
         startOffset: offset,
         lockOffset: offset,
-        startedOpen: open,
+        startedOpen: openRef.current,
         horizontal: false,
-        lastX: touch.clientX,
+        lastX: event.clientX,
         lastAt: now,
         velocityX: 0,
       };
     };
 
-    const onTouchMove = (event: TouchEvent): void => {
+    const onPointerMove = (event: PointerEvent): void => {
       const gesture = gestureRef.current;
-      if (!gesture) return;
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
 
-      const touch = findTouch(event.touches, gesture.touchId);
-      if (!touch) return;
-
-      const deltaX = touch.clientX - gesture.startX;
-      const deltaY = touch.clientY - gesture.startY;
+      const deltaX = event.clientX - gesture.startX;
 
       if (!gesture.horizontal) {
-        const absX = Math.abs(deltaX);
-        const absY = Math.abs(deltaY);
-        if (Math.max(absX, absY) < DIRECTION_THRESHOLD_PX) return;
-
-        // Only unmistakably vertical intent goes to transcript scrolling. A
-        // diagonal right swipe should feel like an attempt to reveal history.
-        if (absY > absX * VERTICAL_DOMINANCE) {
-          gestureRef.current = null;
-          return;
-        }
+        // Do not reject a gesture because its first few pixels drift vertically.
+        // If native scrolling wins, the browser sends pointercancel instead.
+        if (Math.abs(deltaX) < DIRECTION_THRESHOLD_PX) return;
 
         // There is nowhere to drag left from the closed position. Do not steal
         // that touch from normal browser behaviour.
-        if (!gesture.startedOpen && deltaX <= 0) {
-          gestureRef.current = null;
-          return;
-        }
+        if (gesture.startOffset === 0 && deltaX <= 0) return;
 
         ++animationRunRef.current;
         const wasSettling = settlingRef.current;
@@ -197,33 +175,30 @@ export function useMobileDrawer() {
         if (wasSettling) gesture.startOffset = surfaceX.get() - deltaX;
         gesture.lockOffset = surfaceX.get();
         gesture.horizontal = true;
+        surface.setPointerCapture(event.pointerId);
         suppressClickRef.current = true;
         setDragging(true);
         setSurfaceRaised(true);
       }
 
-      // This listener is intentionally non-passive. Once horizontal intent is
-      // locked, cancelling native movement prevents vertical scroll/rubber-band
-      // from combining with the x transform into a circular-looking drag.
-      if (event.cancelable) event.preventDefault();
-
       const now = performance.now();
       const elapsed = now - gesture.lastAt;
       if (elapsed > 0) {
-        const instantVelocity = (touch.clientX - gesture.lastX) / elapsed;
+        const instantVelocity = (event.clientX - gesture.lastX) / elapsed;
         gesture.velocityX = gesture.velocityX * 0.25 + instantVelocity * 0.75;
       }
-      gesture.lastX = touch.clientX;
+      gesture.lastX = event.clientX;
       gesture.lastAt = now;
 
       surfaceX.set(clamp(gesture.startOffset + deltaX, 0, drawerWidth()));
     };
 
-    const finishTouch = (event: TouchEvent, cancelled = false): void => {
+    const finishPointer = (event: PointerEvent, cancelled = false): void => {
       const gesture = gestureRef.current;
-      if (!gesture) return;
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
 
       gestureRef.current = null;
+      if (surface.hasPointerCapture(event.pointerId)) surface.releasePointerCapture(event.pointerId);
       if (!gesture.horizontal) return;
 
       const velocityIsRecent =
@@ -249,32 +224,32 @@ export function useMobileDrawer() {
 
       settle(shouldOpen);
 
-      // A horizontal drag that began on a link must not activate that link on
-      // release. The flag lasts only through the synthesized click.
-      window.setTimeout(() => {
-        suppressClickRef.current = false;
-      }, 0);
-
-      // Some browsers omit the tracked touch from a cancellation event. The
-      // final position is intentionally taken from the last move instead.
-      void event;
+      // Keep click suppression until the synthesized click or next pointerdown.
+      // A timeout can expire before a mobile browser dispatches its click.
     };
 
-    const onTouchEnd = (event: TouchEvent): void => finishTouch(event);
-    const onTouchCancel = (event: TouchEvent): void => finishTouch(event, true);
+    const onPointerUp = (event: PointerEvent): void => finishPointer(event);
+    const onPointerCancel = (event: PointerEvent): void => finishPointer(event, true);
 
-    surface.addEventListener("touchstart", onTouchStart, { passive: true });
-    surface.addEventListener("touchmove", onTouchMove, { passive: false });
-    surface.addEventListener("touchend", onTouchEnd, { passive: true });
-    surface.addEventListener("touchcancel", onTouchCancel, { passive: true });
+    surface.addEventListener("pointerdown", onPointerDown, true);
+    // Capture phase also observes completion outside the surface or when a
+    // descendant stops propagation. These listeners stay mounted while opening.
+    window.addEventListener("pointermove", onPointerMove, true);
+    window.addEventListener("pointerup", onPointerUp, true);
+    window.addEventListener("pointercancel", onPointerCancel, true);
+    surface.addEventListener("lostpointercapture", onPointerCancel);
 
     return () => {
-      surface.removeEventListener("touchstart", onTouchStart);
-      surface.removeEventListener("touchmove", onTouchMove);
-      surface.removeEventListener("touchend", onTouchEnd);
-      surface.removeEventListener("touchcancel", onTouchCancel);
+      surface.removeEventListener("pointerdown", onPointerDown, true);
+      window.removeEventListener("pointermove", onPointerMove, true);
+      window.removeEventListener("pointerup", onPointerUp, true);
+      window.removeEventListener("pointercancel", onPointerCancel, true);
+      surface.removeEventListener("lostpointercapture", onPointerCancel);
+      const gesture = gestureRef.current;
+      gestureRef.current = null;
+      if (gesture && surface.hasPointerCapture(gesture.pointerId)) surface.releasePointerCapture(gesture.pointerId);
     };
-  }, [open, settle, surfaceX]);
+  }, [settle, surfaceX]);
 
   const onSurfaceClickCapture = useCallback(
     (event: ReactMouseEvent<HTMLElement>): void => {

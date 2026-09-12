@@ -257,6 +257,11 @@ body {
  * the exposed edge reads as a real layer rather than an overlay drawer.
  */
 @media (max-width: 767px) {
+  .chat-surface,
+  .chat-surface [data-chat-scroll] {
+    touch-action: pan-y pinch-zoom;
+  }
+
   .chat-surface {
     position: fixed;
     inset: 0;
@@ -281,9 +286,18 @@ body {
     box-shadow: -18px 0 42px rgba(0, 0, 0, 0.34);
   }
 
-  /* Once horizontal intent wins, the conversation is one rigid x-axis layer.
-     Native scrolling is cancelled by the gesture handler; the transcript's
-     overflow stays unchanged so the browser does not cancel the active touch. */
+  /* Avoid a transcript bounce continuing into the next horizontal gesture. */
+  .chat-surface [data-chat-scroll] {
+    overscroll-behavior: none;
+  }
+
+  /* The revealed conversation is a dismiss surface, not a scroll target.
+     This policy applies to the NEXT gesture; it does not claim an active one. */
+  .chat-surface[data-mobile-drawer="true"],
+  .chat-surface[data-mobile-drawer="true"] [data-chat-scroll] {
+    touch-action: pinch-zoom;
+  }
+
   .chat-surface[data-drawer-dragging="true"] {
     user-select: none;
   }
