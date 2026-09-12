@@ -17,12 +17,15 @@ import { transition } from "@/lib/motion";
  * Clear space left between the end of a revealed title and the cover, in
  * pixels.
  *
- * The title scrolls so its last character stops short of the cover entirely,
- * rather than up against it. A word ending exactly at an edge still reads as
- * though it might continue; a gap is what makes it obvious the title is
- * finished and nothing is being withheld.
+ * The title may finish slightly inside the cover's transparent fade, but never
+ * reaches the opaque area behind the options button. This uses otherwise empty
+ * visual space while keeping the end of the title readable.
  */
 const REVEAL_GAP_PX = 2;
+/** How far into the cover's transparent fade a title may travel. */
+const FADE_REVEAL_PX = 16;
+/** Reading pace for a title reveal, independent of title length. */
+const SCROLL_SPEED_PX_PER_SECOND = 30;
 
 interface SessionItemProps {
   id: string;
@@ -76,18 +79,16 @@ export function SessionItem({
     const cover = coverRef.current;
 
     if (clip && text && cover) {
-      // The end of the title has to come to rest clear of the cover, not
-      // merely reach the edge of the row: stopping at the edge leaves the last
-      // words behind the button, which is the part worth scrolling to read.
+      // Use the transparent edge of the cover too, but keep the text well
+      // short of the opaque portion behind the options button.
       //
-      // Measured to where the cover begins — its left edge, not the point it
-      // turns opaque — and then pulled back further by a gap, so the last
-      // character finishes in open space rather than against the fade. Taken
-      // from the cover's own box, so the travel stays right if the button or
-      // its padding ever changes.
+      // Measured from the cover's left edge and extended only into its fade.
+      // Taken from the cover's own box, so the travel stays right if the
+      // button or its padding ever changes.
       const clipBox = clip.getBoundingClientRect();
       const coverBox = cover.getBoundingClientRect();
-      const usable = coverBox.left - clipBox.left - REVEAL_GAP_PX;
+      const usable =
+        coverBox.left - clipBox.left + FADE_REVEAL_PX - REVEAL_GAP_PX;
 
       // Nothing to reveal unless the row is actually clipping the title. The
       // gap makes the resting place narrower than the row, so without this a
@@ -217,7 +218,10 @@ export function SessionItem({
               <span
                 ref={textRef}
                 style={
-                  { "--scroll-distance": `${overflow}px` } as CSSProperties
+                  {
+                    "--scroll-distance": `${overflow}px`,
+                    "--scroll-duration": `${Math.max(overflow / SCROLL_SPEED_PX_PER_SECOND, 0.4)}s`,
+                  } as CSSProperties
                 }
                 className={`
                   inline-block max-w-full truncate align-bottom text-white

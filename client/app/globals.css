@@ -199,25 +199,21 @@ body {
  * Sidebar title that reveals itself on hover.
  *
  * A long conversation title is clipped to the width of the rail. Hovering
- * slides it left by however much is hidden, holds so the end can be read, then
- * returns. Titles are a sentence at most, so one duration covers them all.
+ * slides it left by however much is hidden. It moves once at a readable speed
+ * and remains at the end until hover leaves, so long titles can be read
+ * without chasing a looping marquee.
  */
 @keyframes title-reveal {
-  0%,
-  15% {
+  from {
     transform: translateX(0);
   }
-  60%,
-  85% {
-    transform: translateX(calc(-1 * var(--scroll-distance, 0px)));
-  }
-  100% {
-    transform: translateX(0);
+  to {
+    transform: translateX(calc(-1 * var(--scroll-distance)));
   }
 }
 
 .title-scroll {
-  animation: title-reveal 4.5s var(--ease-in-out-soft) infinite;
+  animation: title-reveal var(--scroll-duration) linear 450ms forwards;
 }
 
 /*
