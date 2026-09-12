@@ -51,6 +51,7 @@ export function MessageList({
   return (
     <div
       ref={containerRef}
+      data-chat-scroll
       onScroll={handleScroll}
       className="flex-1 overflow-y-auto overscroll-contain"
     >

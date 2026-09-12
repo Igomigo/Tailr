@@ -269,11 +269,22 @@ body {
     background-color: color-mix(
       in srgb,
       var(--color-canvas),
-      var(--color-surface) 48%
+      var(--color-ink) 10%
     );
-    border-bottom-left-radius: 1.25rem;
-    border-top-left-radius: 1.25rem;
-    box-shadow: -14px 0 34px rgba(0, 0, 0, 0.28);
+    border-bottom-left-radius: 2rem;
+    border-top-left-radius: 2rem;
+    box-shadow: -18px 0 42px rgba(0, 0, 0, 0.34);
+  }
+
+  /* Once horizontal intent wins, the conversation is one rigid x-axis layer.
+     The transcript cannot continue scrolling underneath a circular finger
+     path and make that layer appear to drift vertically. */
+  .chat-surface[data-drawer-dragging="true"] {
+    user-select: none;
+  }
+
+  .chat-surface[data-drawer-dragging="true"] [data-chat-scroll] {
+    overflow-y: hidden;
   }
 }
 
