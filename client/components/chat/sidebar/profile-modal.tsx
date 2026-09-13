@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import type { AuthUser } from "@/lib/api";
@@ -31,14 +31,11 @@ export function ProfileModal({
   const [confirming, setConfirming] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
-  // Reopening the dialog should always land on the account view, never on a
-  // confirmation the user left behind when they last closed it.
-  useEffect(() => {
-    if (!open) {
-      setConfirming(false);
-      setSigningOut(false);
-    }
-  }, [open]);
+  const handleClose = (): void => {
+    setConfirming(false);
+    setSigningOut(false);
+    onClose();
+  };
 
   const handleConfirm = async (): Promise<void> => {
     setSigningOut(true);
@@ -55,10 +52,11 @@ export function ProfileModal({
     return (
       <Modal
         open={open}
-        onClose={onClose}
+        onClose={handleClose}
         title="Sign out?"
         description="You will need to sign in again to reach your conversations."
         size="sm"
+        surface="glass"
       >
         <div className="mt-6 flex gap-3">
           <Button
@@ -82,7 +80,7 @@ export function ProfileModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Your account" size="sm">
+    <Modal open={open} onClose={handleClose} title="Your account" size="sm" surface="glass">
       <div className="flex items-center gap-3.5">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-quiet)] text-title font-medium text-[var(--color-accent)]">
           {user.name.charAt(0).toUpperCase()}

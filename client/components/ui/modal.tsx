@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
 import { transition } from "@/lib/motion";
+import { GlassSurface } from "./glass-surface";
 
 interface ModalProps {
   open: boolean;
@@ -18,6 +20,8 @@ interface ModalProps {
   showClose?: boolean;
   /** Removes panel padding and background, for full-bleed content like images. */
   bare?: boolean;
+  /** Optional shared glass material; ordinary dialogs remain solid. */
+  surface?: "solid" | "glass";
   /**
    * Where the panel sits vertically.
    *
@@ -36,6 +40,10 @@ const SIZES = {
   lg: "max-w-[46rem]",
 } as const;
 
+const subscribeToClient = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
 /**
  * A modal dialog.
  *
@@ -53,9 +61,15 @@ export function Modal({
   size = "md",
   showClose = true,
   bare = false,
+  surface = "solid",
   align = "center",
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const canPortal = useSyncExternalStore(
+    subscribeToClient,
+    clientSnapshot,
+    serverSnapshot,
+  );
 
   // Held in a ref so the effect below can depend on `open` alone. Callers
   // routinely pass an inline arrow, which is a new function every render; with
@@ -123,7 +137,20 @@ export function Modal({
     };
   }, [open]);
 
-  return (
+  const glass = surface === "glass" && !bare;
+  const content = (
+    <>
+      {title && !bare && (
+        <div className="mb-5">
+          <h2 className="text-title font-semibold text-ink">{title}</h2>
+          {description && <p className="mt-1 text-small text-ink-muted">{description}</p>}
+        </div>
+      )}
+      {children}
+    </>
+  );
+
+  const modal = (
     <AnimatePresence>
       {open && (
         <motion.div
@@ -132,7 +159,7 @@ export function Modal({
           exit={{ opacity: 0 }}
           transition={transition.base}
           onClick={onClose}
-          className="fixed inset-0 z-50 overflow-y-auto bg-[var(--color-canvas)]/80 backdrop-blur-2xl"
+          className={`fixed inset-0 z-50 overflow-y-auto ${glass ? "bg-black/20" : "bg-[var(--color-canvas)]/80 backdrop-blur-2xl"}`}
         >
           <div
             className={`
@@ -154,24 +181,19 @@ export function Modal({
               className={`
                 relative w-full ${SIZES[size]} focus:outline-none
                 ${
-                  bare
+                  glass
+                    ? ""
+                    : bare
                     ? "overflow-hidden rounded-[var(--radius-md)]"
                     : "rounded-[var(--radius-lg)] border border-white/10 bg-[var(--color-overlay)] p-6 shadow-[0_32px_90px_-20px_rgba(0,0,0,0.8)]"
                 }
               `}
             >
-              {title && !bare && (
-                <div className="mb-5">
-                  <h2 className="text-title font-semibold text-ink">{title}</h2>
-                  {description && (
-                    <p className="mt-1 text-small text-ink-muted">
-                      {description}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {children}
+              {glass ? (
+                <GlassSurface className="rounded-[var(--radius-lg)] p-6">
+                  {content}
+                </GlassSurface>
+              ) : content}
             </motion.div>
           </div>
 
@@ -202,4 +224,8 @@ export function Modal({
       )}
     </AnimatePresence>
   );
+
+  // Modals opened from the mobile sidebar must escape its z-index context;
+  // otherwise the raised conversation surface can paint over part of them.
+  return canPortal ? createPortal(modal, document.body) : null;
 }

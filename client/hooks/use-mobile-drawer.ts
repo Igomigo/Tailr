@@ -7,7 +7,7 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
 } from "react";
-import { animate, useMotionValue } from "motion/react";
+import { animate, useMotionValue, useTransform } from "motion/react";
 
 /** The revealed sidebar occupies this fraction of a compact viewport. */
 const DRAWER_WIDTH_RATIO = 0.8;
@@ -50,6 +50,16 @@ export function useMobileDrawer() {
   const [surfaceRaised, setSurfaceRaised] = useState(false);
   const surfaceRef = useRef<HTMLElement | null>(null);
   const surfaceX = useMotionValue(0);
+  const surfaceColor = useTransform(surfaceX, (position) => {
+    if (typeof window === "undefined") return "var(--color-canvas)";
+
+    const progress = clamp(position / drawerWidth(), 0, 1);
+    if (progress < 0.001) return "var(--color-canvas)";
+
+    // Following the drawer position removes the binary tint change at the
+    // beginning and end of a swipe, including button-driven spring movement.
+    return `color-mix(in srgb, var(--color-canvas), var(--color-ink) ${progress * 10}%)`;
+  });
   const gestureRef = useRef<DrawerGesture | null>(null);
   const suppressClickRef = useRef(false);
   const animationRunRef = useRef(0);
@@ -277,6 +287,7 @@ export function useMobileDrawer() {
     surfaceRaised,
     surfaceRef,
     surfaceX,
+    surfaceColor,
     openDrawer,
     closeDrawer,
     onSurfaceClickCapture,

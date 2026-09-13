@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { GlassSurface } from "./glass-surface";
 
 interface MenuProps {
   open: boolean;
@@ -61,13 +62,12 @@ export function Menu({ open, onClose, children, align = "right" }: MenuProps) {
           }}
           className={`
             absolute top-full z-50 mt-1 min-w-40
-            overflow-hidden rounded-[var(--radius-md)]
-            border border-white/10 bg-[var(--color-overlay)]
-            p-1 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.7)]
             ${align === "right" ? "right-0" : "left-0"}
           `}
         >
-          {children}
+          <GlassSurface className="rounded-[var(--radius-md)] p-1">
+            {children}
+          </GlassSurface>
         </motion.div>
       )}
     </AnimatePresence>

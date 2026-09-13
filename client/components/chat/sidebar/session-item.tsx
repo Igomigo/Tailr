@@ -73,6 +73,8 @@ export function SessionItem({
   const [pressing, setPressing] = useState(false);
   // Lazy-mount on first hold, then retain the modal for its exit animation.
   const [previewOpen, setPreviewOpen] = useState<boolean | null>(null);
+  const rowRef = useRef<HTMLLIElement>(null);
+  const [previewOriginY, setPreviewOriginY] = useState<number>();
   const [previousMobileOpen, setPreviousMobileOpen] = useState(mobileOpen);
   if (previousMobileOpen !== mobileOpen) {
     setPreviousMobileOpen(mobileOpen);
@@ -173,6 +175,8 @@ export function SessionItem({
       longPressTriggeredRef.current = true;
       longPressTimerRef.current = null;
       setPressing(false);
+      const box = rowRef.current?.getBoundingClientRect();
+      setPreviewOriginY(box ? box.top + box.height / 2 : undefined);
       setPreviewOpen(true);
     }, LONG_PRESS_DELAY_MS);
   };
@@ -248,6 +252,7 @@ export function SessionItem({
 
   return (
     <li
+      ref={rowRef}
       data-pressing={pressing}
       className="group/item relative"
       onMouseEnter={handleEnter}
@@ -377,7 +382,11 @@ export function SessionItem({
         aria-label={`Options for ${title}`}
         onClick={(event) => {
           event.preventDefault();
-          if (mobileOpen !== undefined) setPreviewOpen(true);
+          if (mobileOpen !== undefined) {
+            const box = rowRef.current?.getBoundingClientRect();
+            setPreviewOriginY(box ? box.top + box.height / 2 : undefined);
+            setPreviewOpen(true);
+          }
           else setMenuOpen(!menuOpen);
         }}
         data-open={menuOpen}
@@ -428,6 +437,7 @@ export function SessionItem({
       {previewOpen !== null && (
         <SessionPreview
           open={Boolean(previewOpen && mobileOpen)}
+          originY={previewOriginY}
           id={id}
           title={title}
           liveMessages={liveMessages}
