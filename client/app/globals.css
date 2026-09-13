@@ -257,6 +257,22 @@ body {
  * the exposed edge reads as a real layer rather than an overlay drawer.
  */
 @media (max-width: 767px) {
+  /* Session holds belong to our preview, rather than Safari's link callout. */
+  [data-session-link] {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  [data-pressing="true"] > [data-session-link] {
+    background-color: rgb(255 255 255 / 0.08);
+    transform: scale(0.98);
+  }
+
+  [data-session-link] {
+    transition: background-color 150ms ease, transform 180ms ease;
+  }
+
   .chat-surface,
   .chat-surface [data-chat-scroll] {
     touch-action: pan-y pinch-zoom;
@@ -304,6 +320,12 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .title-scroll {
+    animation: none;
+    transform: none;
+    max-width: 100%;
+  }
+
   *,
   *::before,
   *::after {

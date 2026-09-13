@@ -8,11 +8,12 @@ import { SessionItem } from "./session-item";
 import { SessionListSkeleton } from "./session-list-skeleton";
 import { ProfileButton } from "./profile-button";
 import { transition } from "@/lib/motion";
-import type { ChatSession } from "@/lib/types";
+import type { ChatMessage, ChatSession } from "@/lib/types";
 
 interface SidebarProps {
   sessions: ChatSession[];
   activeId?: string;
+  activeMessages?: ChatMessage[];
   /** Shows placeholder rows in place of the list while it is being fetched. */
   loading?: boolean;
   /** Shown in place of the list when sessions could not be loaded. */
@@ -34,12 +35,15 @@ const RAIL_WIDTH_PX = 256;
 type ContentProps = Omit<SidebarProps, "collapsed" | "open" | "onClose"> & {
   /** Closes the mobile drawer once a conversation has been opened. */
   onNavigate?: () => void;
+  mobileOpen?: boolean;
 };
 
 /** Groups conversations under a heading once there are any. */
 function SessionList({
   sessions,
   activeId,
+  activeMessages,
+  mobileOpen,
   loading,
   error,
   onRename,
@@ -77,6 +81,8 @@ function SessionList({
             id={session._id}
             title={session.title}
             active={session._id === activeId}
+            mobileOpen={mobileOpen}
+            liveMessages={session._id === activeId ? activeMessages : undefined}
             onRename={onRename}
             onDelete={onDelete}
             onNavigate={onNavigate}
@@ -188,7 +194,7 @@ export function Sidebar({
         >
           <X size={17} strokeWidth={1.75} />
         </button>
-        <SidebarContent {...content} onNavigate={onClose} />
+        <SidebarContent {...content} mobileOpen={open} onNavigate={onClose} />
       </aside>
     </>
   );

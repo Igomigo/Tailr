@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -13,6 +14,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Menu, MenuItem } from "@/components/ui/menu";
 import { transition } from "@/lib/motion";
+import { SessionPreview } from "./session-preview";
+import type { ChatMessage } from "@/lib/types";
 
 /**
  * Clear space left between the end of a revealed title and the cover, in
@@ -34,6 +37,8 @@ interface SessionItemProps {
   id: string;
   title: string;
   active: boolean;
+  mobileOpen?: boolean;
+  liveMessages?: ChatMessage[];
   onRename: (id: string, title: string) => Promise<void>;
   onDelete: (id: string) => void;
   /**
@@ -55,6 +60,8 @@ export function SessionItem({
   id,
   title,
   active,
+  mobileOpen,
+  liveMessages,
   onRename,
   onDelete,
   onNavigate,
@@ -64,6 +71,13 @@ export function SessionItem({
   const [draft, setDraft] = useState(title);
   const [hovered, setHovered] = useState(false);
   const [pressing, setPressing] = useState(false);
+  // Lazy-mount on first hold, then retain the modal for its exit animation.
+  const [previewOpen, setPreviewOpen] = useState<boolean | null>(null);
+  const [previousMobileOpen, setPreviousMobileOpen] = useState(mobileOpen);
+  if (previousMobileOpen !== mobileOpen) {
+    setPreviousMobileOpen(mobileOpen);
+    if (!mobileOpen && previewOpen) setPreviewOpen(false);
+  }
   const inputRef = useRef<HTMLInputElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -78,9 +92,8 @@ export function SessionItem({
   const coverRef = useRef<HTMLSpanElement>(null);
   const [overflow, setOverflow] = useState(0);
 
-  // Measured on hover rather than watched continuously. The widths are only
-  // needed at the moment the reveal starts, and by then the row is laid out.
-  const handleEnter = (): void => {
+  // Desktop measures on hover; mobile observes only the active, revealed row.
+  const measureOverflow = useCallback((): void => {
     const clip = clipRef.current;
     const text = textRef.current;
     const cover = coverRef.current;
@@ -94,8 +107,9 @@ export function SessionItem({
       // button or its padding ever changes.
       const clipBox = clip.getBoundingClientRect();
       const coverBox = cover.getBoundingClientRect();
-      const usable =
-        coverBox.left - clipBox.left + FADE_REVEAL_PX - REVEAL_GAP_PX;
+      const usable = mobileOpen !== undefined
+        ? clip.clientWidth - REVEAL_GAP_PX
+        : coverBox.left - clipBox.left + FADE_REVEAL_PX - REVEAL_GAP_PX;
 
       // Nothing to reveal unless the row is actually clipping the title. The
       // gap makes the resting place narrower than the row, so without this a
@@ -105,14 +119,27 @@ export function SessionItem({
 
       setOverflow(hidden ? Math.max(0, text.scrollWidth - usable) : 0);
     }
+  }, [mobileOpen]);
 
+  const handleEnter = (): void => {
+    if (mobileOpen !== undefined) return;
+    measureOverflow();
     setHovered(true);
   };
+
+  useEffect(() => {
+    if (!mobileOpen || !active) return;
+    const observer = new ResizeObserver(measureOverflow);
+    if (clipRef.current) observer.observe(clipRef.current);
+    if (textRef.current) observer.observe(textRef.current);
+    return () => observer.disconnect();
+  }, [mobileOpen, active, title, editing, measureOverflow]);
 
   // Only while there is something to reveal. Scrolling a title that already
   // fits would move it for no reason, and scrolling under an open menu would
   // pull the eye away from the choice being made.
-  const revealing = hovered && overflow > 0 && !menuOpen;
+  const revealing = (mobileOpen !== undefined ? mobileOpen && active : hovered)
+    && overflow > 0 && !menuOpen && !previewOpen && !editing;
 
   useEffect(() => {
     if (editing) inputRef.current?.select();
@@ -135,8 +162,10 @@ export function SessionItem({
   const handleTouchPointerDown = (
     event: ReactPointerEvent<HTMLLIElement>,
   ): void => {
-    if (event.pointerType !== "touch") return;
+    if (event.pointerType !== "touch" || !event.isPrimary || !mobileOpen) return;
+    if (!(event.target instanceof Element) || !event.target.closest("[data-session-link]")) return;
 
+    cancelLongPress();
     longPressTriggeredRef.current = false;
     longPressStartRef.current = { x: event.clientX, y: event.clientY };
     setPressing(true);
@@ -144,7 +173,7 @@ export function SessionItem({
       longPressTriggeredRef.current = true;
       longPressTimerRef.current = null;
       setPressing(false);
-      setMenuOpen(true);
+      setPreviewOpen(true);
     }, LONG_PRESS_DELAY_MS);
   };
 
@@ -228,10 +257,12 @@ export function SessionItem({
       onPointerUp={cancelLongPress}
       onPointerCancel={cancelLongPress}
       onContextMenu={(event) => {
-        if (longPressTriggeredRef.current) event.preventDefault();
+        if (mobileOpen !== undefined) event.preventDefault();
       }}
     >
       <Link
+        data-session-link
+        draggable={false}
         href={`/chat/${id}`}
         onClick={(event) => {
           if (longPressTriggeredRef.current) {
@@ -346,7 +377,8 @@ export function SessionItem({
         aria-label={`Options for ${title}`}
         onClick={(event) => {
           event.preventDefault();
-          setMenuOpen(!menuOpen);
+          if (mobileOpen !== undefined) setPreviewOpen(true);
+          else setMenuOpen(!menuOpen);
         }}
         data-open={menuOpen}
         className="
@@ -393,6 +425,26 @@ export function SessionItem({
           Delete
         </MenuItem>
       </Menu>
+      {previewOpen !== null && (
+        <SessionPreview
+          open={Boolean(previewOpen && mobileOpen)}
+          id={id}
+          title={title}
+          liveMessages={liveMessages}
+          onClose={() => setPreviewOpen(false)}
+          onRename={() => {
+            setPreviewOpen(false);
+            setDraft(title);
+            setEditing(true);
+          }}
+          onDelete={() => {
+            // Hand off to the confirmation as a single dialog, without leaving
+            // the preview's exit overlay above the new confirmation.
+            setPreviewOpen(null);
+            onDelete(id);
+          }}
+        />
+      )}
     </li>
   );
 }
