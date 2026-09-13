@@ -74,7 +74,7 @@ function SessionList({
       <p className="px-1 pb-1.5 pt-4 text-micro uppercase tracking-[0.12em] text-ink-faint">
         Recent
       </p>
-      <ul className="flex flex-col gap-1.5 md:gap-0.5">
+      <ul className="flex flex-col gap-1 md:gap-0.5">
         {sessions.map((session) => (
           <SessionItem
             key={session._id}

@@ -41,10 +41,10 @@ export function SessionPreview({ open, originY, id, title, liveMessages, onClose
       {open && <PreviewLayer title={title} originY={originY} onClose={onClose}>
       <div className="session-preview-card">
         <div className="shrink-0 bg-white/[0.08] px-5 py-3">
-          <h2 className="line-clamp-2 break-words text-sm text-ink-muted">{title}</h2>
+          <h2 className="line-clamp-2 break-words text-[0.8125rem] text-ink-muted">{title}</h2>
         </div>
-        <div className="shrink-0 px-5 pb-2 pt-4 text-2xl font-semibold tracking-tight text-ink" aria-hidden="true">Tailr<span className="text-[var(--color-accent)]">.</span></div>
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-hidden px-5 py-4 text-base leading-relaxed text-ink-muted" aria-live="polite">
+        <div className="shrink-0 px-5 pb-2 pt-4 text-[1.375rem] font-semibold tracking-tight text-ink" aria-hidden="true">Tailr<span className="text-[var(--color-accent)]">.</span></div>
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-hidden px-5 py-4 text-[0.9375rem] leading-[1.6] text-ink-muted" aria-live="polite">
           {!messages ? (
             <p className="my-auto text-center text-ink-faint">{isError ? "Preview unavailable. You can still manage this chat below." : isPending ? "Loading preview…" : "No messages yet."}</p>
           ) : !user && !assistant ? (

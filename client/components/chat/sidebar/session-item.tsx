@@ -279,7 +279,7 @@ export function SessionItem({
         }}
         data-active={active}
         className="
-          block overflow-hidden rounded-[var(--radius-sm)] px-3 py-3.5
+          block overflow-hidden rounded-[var(--radius-sm)] px-3 py-3
           text-[1rem] leading-6 text-ink-muted
           transition-colors duration-150
           hover:bg-white/[0.08] hover:text-ink

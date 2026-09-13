@@ -37,6 +37,7 @@ export function ChatView({ chatId }: { chatId?: string }) {
     surfaceRef: mobileSurfaceRef,
     surfaceX: mobileSurfaceX,
     surfaceColor: mobileSurfaceColor,
+    surfaceEdgeColor: mobileSurfaceEdgeColor,
     openDrawer: openMobileDrawer,
     closeDrawer: closeMobileDrawer,
     onSurfaceClickCapture,
@@ -132,7 +133,11 @@ export function ChatView({ chatId }: { chatId?: string }) {
         ref={mobileSurfaceRef}
         data-mobile-drawer={mobileSurfaceRaised}
         data-drawer-dragging={mobileDrawerDragging}
-        style={{ x: mobileSurfaceX, backgroundColor: mobileSurfaceColor }}
+        style={{
+          x: mobileSurfaceX,
+          backgroundColor: mobileSurfaceColor,
+          borderLeftColor: mobileSurfaceEdgeColor,
+        }}
         onClickCapture={onSurfaceClickCapture}
         className="chat-surface relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-canvas)]"
       >

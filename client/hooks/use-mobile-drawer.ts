@@ -60,6 +60,12 @@ export function useMobileDrawer() {
     // beginning and end of a swipe, including button-driven spring movement.
     return `color-mix(in srgb, var(--color-canvas), var(--color-ink) ${progress * 10}%)`;
   });
+  const surfaceEdgeColor = useTransform(surfaceX, (position) => {
+    if (typeof window === "undefined") return "rgba(205, 211, 216, 0)";
+
+    const progress = clamp(position / drawerWidth(), 0, 1);
+    return `rgba(205, 211, 216, ${progress * 0.18})`;
+  });
   const gestureRef = useRef<DrawerGesture | null>(null);
   const suppressClickRef = useRef(false);
   const animationRunRef = useRef(0);
@@ -288,6 +294,7 @@ export function useMobileDrawer() {
     surfaceRef,
     surfaceX,
     surfaceColor,
+    surfaceEdgeColor,
     openDrawer,
     closeDrawer,
     onSurfaceClickCapture,
