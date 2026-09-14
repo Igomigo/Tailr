@@ -20,7 +20,7 @@ interface ModalProps {
   showClose?: boolean;
   /** Removes panel padding and background, for full-bleed content like images. */
   bare?: boolean;
-  /** Optional shared glass material; ordinary dialogs remain solid. */
+  /** Shared panel material. Normal dialogs use glass; callers may opt into solid. */
   surface?: "solid" | "glass";
   /**
    * Where the panel sits vertically.
@@ -61,7 +61,7 @@ export function Modal({
   size = "md",
   showClose = true,
   bare = false,
-  surface = "solid",
+  surface = "glass",
   align = "center",
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -159,7 +159,7 @@ export function Modal({
           exit={{ opacity: 0 }}
           transition={transition.base}
           onClick={onClose}
-          className={`fixed inset-0 z-50 overflow-y-auto ${glass ? "bg-black/20" : "bg-[var(--color-canvas)]/80 backdrop-blur-2xl"}`}
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/25 backdrop-blur-lg"
         >
           <div
             className={`
