@@ -159,7 +159,11 @@ export function Modal({
           exit={{ opacity: 0 }}
           transition={transition.base}
           onClick={onClose}
-          className="fixed inset-0 z-50 overflow-y-auto bg-black/25 backdrop-blur-lg"
+          className={`fixed inset-0 z-50 overflow-y-auto ${
+            glass
+              ? "bg-black/15 backdrop-blur-sm"
+              : "bg-black/25 backdrop-blur-lg"
+          }`}
         >
           <div
             className={`
