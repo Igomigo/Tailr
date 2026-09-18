@@ -188,7 +188,7 @@ export function Modal({
                   glass
                     ? ""
                     : bare
-                    ? "overflow-hidden rounded-[var(--radius-md)]"
+                    ? "rounded-[var(--radius-md)]"
                     : "rounded-[var(--radius-lg)] border border-white/10 bg-[var(--color-overlay)] p-6 shadow-[0_32px_90px_-20px_rgba(0,0,0,0.8)]"
                 }
               `}

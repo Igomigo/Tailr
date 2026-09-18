@@ -7,6 +7,11 @@ const A4_HEIGHT_IN = 11.7;
 /** Page margin in inches, matching the `@page` margin in the templates (16mm). */
 const MARGIN_IN = 0.63;
 
+interface PdfPageOptions {
+  /** Uniform print margin in inches. Existing templates default to 16mm. */
+  marginIn?: number;
+}
+
 /**
  * Converts an HTML document into a PDF using Gotenberg's Chromium route.
  *
@@ -19,16 +24,20 @@ const MARGIN_IN = 0.63;
  * @returns The generated PDF as a Buffer.
  * @throws If Gotenberg is unreachable or returns a non-2xx response.
  */
-export async function convertHtmlToPdf(html: string): Promise<Buffer> {
+export async function convertHtmlToPdf(
+  html: string,
+  options: PdfPageOptions = {},
+): Promise<Buffer> {
+  const marginIn = options.marginIn ?? MARGIN_IN;
   const form = new FormData();
   form.append("files", new Blob([html], { type: "text/html" }), "index.html");
   form.append("printBackground", "true");
   form.append("paperWidth", String(A4_WIDTH_IN));
   form.append("paperHeight", String(A4_HEIGHT_IN));
-  form.append("marginTop", String(MARGIN_IN));
-  form.append("marginBottom", String(MARGIN_IN));
-  form.append("marginLeft", String(MARGIN_IN));
-  form.append("marginRight", String(MARGIN_IN));
+  form.append("marginTop", String(marginIn));
+  form.append("marginBottom", String(marginIn));
+  form.append("marginLeft", String(marginIn));
+  form.append("marginRight", String(marginIn));
 
   const endpoint = `${GOTENBERG_URL}/forms/chromium/convert/html`;
 
