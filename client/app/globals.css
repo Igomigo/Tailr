@@ -232,6 +232,22 @@ body {
     0 18px 52px rgb(0 0 0 / 32%);
 }
 
+/* A lighter glass treatment for controls floating directly over content. */
+.glass-surface--clear {
+  background: linear-gradient(
+    145deg,
+    rgb(70 76 82 / 11%),
+    rgb(24 27 30 / 5%) 58%,
+    rgb(18 20 23 / 7%)
+  );
+  -webkit-backdrop-filter: blur(4px) saturate(125%);
+  backdrop-filter: blur(4px) saturate(125%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 22%),
+    inset 0 -1px 0 rgb(0 0 0 / 18%),
+    0 8px 24px rgb(0 0 0 / 20%);
+}
+
 /* The uneven rim catches more light at the top-left and fades on the far edge,
    which gives a flat translucent panel the thickness of a glass sheet. */
 .glass-surface::before {
@@ -266,6 +282,15 @@ body {
     inset 5px 5px 14px rgb(224 247 244 / 6%),
     inset -8px -8px 18px rgb(0 0 0 / 9%);
   pointer-events: none;
+}
+
+.glass-surface--clear::after {
+  background: radial-gradient(
+    110% 68% at 18% -16%,
+    rgb(238 255 253 / 5%),
+    transparent 52%
+  );
+  box-shadow: inset 3px 3px 10px rgb(224 247 244 / 4%);
 }
 
 @supports not (backdrop-filter: blur(1px)) {
