@@ -12,6 +12,7 @@ import { MessageListSkeleton } from "./message-list-skeleton";
 import { EmptyState } from "./empty-state";
 import { ErrorNotice } from "./error-notice";
 import { Notice } from "./notice";
+import { TemplateBrowser } from "@/components/templates/template-browser";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { MessageInput } from "@/components/message-input";
@@ -158,6 +159,10 @@ export function ChatView({ chatId }: { chatId?: string }) {
 
           <div className="md:hidden">
             <Logo href="/chat" />
+          </div>
+
+          <div className="ml-auto">
+            <TemplateBrowser />
           </div>
         </header>
 
